@@ -95,6 +95,22 @@
     .btn-sort { background: #0f3460; color: #fff; width: 100%; padding: 14px; font-size: 1.1rem; margin-bottom: 24px; }
     .btn-sort-alert { background: #e94560; animation: pulse 1.2s infinite; }
     @keyframes pulse { 0%,100% { opacity: 1; } 50% { opacity: 0.7; } }
+    .section-block { margin-bottom: 24px; }
+    .section-title { font-size: 1.15rem; color: #eee; margin-bottom: 12px; }
+    .section-title .muted-small { font-size: 0.8rem; color: #777; font-weight: 400; }
+    .hint-small { font-size: 0.8rem; color: #888; margin-top: 8px; text-align: center; }
+    .btn-gen { background: #0f3460; color: #fff; width: 100%; padding: 14px; font-size: 1.05rem; margin-bottom: 16px; }
+    .btn-gen:disabled { opacity: 0.4; cursor: not-allowed; }
+    .team li.not-confirmed { opacity: 0.4; }
+    .absent-tag {
+      font-size: 0.65rem;
+      color: #e94560;
+      border: 1px solid #e94560;
+      border-radius: 5px;
+      padding: 0 5px;
+      margin-left: 8px;
+      vertical-align: middle;
+    }
 
     /* Guest checkbox in add form */
     .guest-checkbox {
@@ -556,12 +572,12 @@
 
     <p v-if="!players.length" class="empty-msg">Nenhum jogador adicionado ainda.</p>
 
-    <div class="blocks-section" v-if="baseCandidates.length >= 2">
+    <div class="blocks-section" v-if="baseRegulars.length >= 2">
       <h2>Bloqueios (nao podem jogar juntos)</h2>
       <div class="block-form">
         <select v-model="blockPlayer1">
           <option value="">Jogador 1</option>
-          <option v-for="p in baseCandidates" :key="p.name" :value="p.name">{{ p.name }}</option>
+          <option v-for="p in baseRegulars" :key="p.name" :value="p.name">{{ p.name }}</option>
         </select>
         <span class="block-separator">X</span>
         <select v-model="blockPlayer2">
@@ -578,70 +594,106 @@
       </ul>
     </div>
 
-    <p v-if="players.length && baseCandidates.length < 2" class="empty-msg">
-      Confirme pelo menos 2 jogadores da base (convidados nao entram no sorteio) para sortear.
+    <p v-if="players.length && baseRegulars.length < 2" class="empty-msg">
+      Cadastre/ative pelo menos 2 jogadores regulares para sortear o time base.
     </p>
-    <button v-if="baseCandidates.length >= 2" class="btn-sort" :class="{ 'btn-sort-alert': mustResort }" @click="sortTeams">
-      {{ mustResort ? '🔁 Sortear novamente (obrigatorio)' : (teamPreto.length ? 'Sortear Times de novo' : 'Sortear Times') }}
-      ({{ baseCandidates.length }}<span v-if="confirmedGuests.length"> + {{ confirmedGuests.length }} conv.</span>)
-    </button>
 
-    <div class="teams" v-if="teamPreto.length">
-      <div class="team team-preto">
-        <h2>Time Preto</h2>
-        <ul>
-          <li
-            v-for="(p, i) in teamPreto"
-            :key="p.name"
-            :class="{ 'selected-swap': swapFrom && swapFrom.team === 'preto' && swapFrom.index === i }"
-            @click="selectSwap('preto', i)"
-          ><span>{{ p.name }}<span v-if="p.guest" class="team-guest">conv.</span></span></li>
-        </ul>
-      </div>
-      <div class="team team-vermelho">
-        <h2>Time Vermelho</h2>
-        <ul>
-          <li
-            v-for="(p, i) in teamVermelho"
-            :key="p.name"
-            :class="{ 'selected-swap': swapFrom && swapFrom.team === 'vermelho' && swapFrom.index === i }"
-            @click="selectSwap('vermelho', i)"
-          ><span>{{ p.name }}<span v-if="p.guest" class="team-guest">conv.</span></span></li>
-        </ul>
-      </div>
-    </div>
-    <div class="swap-hint" v-if="teamPreto.length && !swapFrom">
-      Clique em um jogador para trocar de time
-    </div>
-    <div class="swap-hint" v-if="swapFrom">
-      Agora clique em um jogador do outro time para trocar, ou clique no mesmo para cancelar
-    </div>
-    <button v-if="drawModified" class="btn-save-draw" @click="saveModifiedDraw">Salvar alteracoes no sorteio</button>
+    <!-- ETAPA 1: TIME BASE -->
+    <div class="section-block" v-if="baseRegulars.length >= 2">
+      <h2 class="section-title">1. Time Base <span class="muted-small">(dura ate um time vencer 2x)</span></h2>
+      <button class="btn-sort" :class="{ 'btn-sort-alert': mustResort }" @click="sortBaseTeams">
+        {{ mustResort ? '🔁 Sortear time base de novo (obrigatorio)' : (baseSorted ? 'Sortear time base de novo' : 'Sortear time base') }}
+        ({{ baseRegulars.length }} regulares)
+      </button>
 
-    <div class="result-panel" v-if="teamPreto.length">
-      <div class="result-title">Placar da partida</div>
-
-      <div v-if="mustResort" class="resort-warning">
-        🔁 Um time venceu 2 vezes nesta rodada! Sorteie os times-base novamente para liberar a proxima partida.
-        <button class="btn-resort" @click="sortTeams">Sortear novamente</button>
-      </div>
-
-      <template v-else>
-        <div class="score-row">
-          <span class="score-team preto">Preto</span>
-          <input type="number" min="0" class="score-input" v-model.number="scorePreto" placeholder="0" />
-          <span class="score-x">x</span>
-          <input type="number" min="0" class="score-input" v-model.number="scoreVermelho" placeholder="0" />
-          <span class="score-team vermelho">Vermelho</span>
+      <div class="teams" v-if="baseSorted">
+        <div class="team team-preto">
+          <h2>Base Preto</h2>
+          <ul>
+            <li v-for="p in baseTeamPreto" :key="p.name" :class="{ 'not-confirmed': !p.confirmed }">
+              <span>{{ p.name }}<span v-if="!p.confirmed" class="absent-tag">falta</span></span>
+            </li>
+          </ul>
         </div>
-        <button class="btn-register" @click="registerMatch">Registrar partida</button>
-      </template>
+        <div class="team team-vermelho">
+          <h2>Base Vermelho</h2>
+          <ul>
+            <li v-for="p in baseTeamVermelho" :key="p.name" :class="{ 'not-confirmed': !p.confirmed }">
+              <span>{{ p.name }}<span v-if="!p.confirmed" class="absent-tag">falta</span></span>
+            </li>
+          </ul>
+        </div>
+      </div>
+      <p v-if="baseSorted && unassignedRegulars.length" class="hint-small">
+        Fora do time base: {{ unassignedRegulars.map(p => p.name).join(', ') }} &mdash; sorteie o time base de novo para incluir.
+      </p>
+    </div>
 
-      <div class="session-record">
-        Vitorias nesta rodada &mdash;
-        <span class="rec-preto">Preto {{ sessionRecord.preto }}</span> x
-        <span class="rec-vermelho">{{ sessionRecord.vermelho }} Vermelho</span>
-        <span v-if="sessionRecord.empate" class="rec-empate"> ({{ sessionRecord.empate }} empate(s))</span>
+    <!-- ETAPA 2: TIMES DA PARTIDA -->
+    <div class="section-block" v-if="baseSorted">
+      <h2 class="section-title">2. Times da Partida <span class="muted-small">(confirmados + convidados do dia)</span></h2>
+      <button class="btn-gen" @click="generateMatchTeams" :disabled="matchPlayerCount < 2">
+        {{ teamPreto.length ? 'Gerar times da partida de novo' : 'Gerar times da partida' }} ({{ matchPlayerCount }})
+      </button>
+      <p v-if="matchPlayerCount < 2" class="hint-small">Confirme pelo menos 2 jogadores (da base ou convidados) para gerar os times.</p>
+
+      <div class="teams" v-if="teamPreto.length || teamVermelho.length">
+        <div class="team team-preto">
+          <h2>Time Preto</h2>
+          <ul>
+            <li
+              v-for="(p, i) in teamPreto"
+              :key="p.name"
+              :class="{ 'selected-swap': swapFrom && swapFrom.team === 'preto' && swapFrom.index === i }"
+              @click="selectSwap('preto', i)"
+            ><span>{{ p.name }}<span v-if="p.guest" class="team-guest">conv.</span></span></li>
+          </ul>
+        </div>
+        <div class="team team-vermelho">
+          <h2>Time Vermelho</h2>
+          <ul>
+            <li
+              v-for="(p, i) in teamVermelho"
+              :key="p.name"
+              :class="{ 'selected-swap': swapFrom && swapFrom.team === 'vermelho' && swapFrom.index === i }"
+              @click="selectSwap('vermelho', i)"
+            ><span>{{ p.name }}<span v-if="p.guest" class="team-guest">conv.</span></span></li>
+          </ul>
+        </div>
+      </div>
+      <div class="swap-hint" v-if="teamPreto.length && !swapFrom">
+        Clique em um jogador para trocar de time
+      </div>
+      <div class="swap-hint" v-if="swapFrom">
+        Agora clique em um jogador do outro time para trocar, ou clique no mesmo para cancelar
+      </div>
+      <button v-if="drawModified" class="btn-save-draw" @click="saveModifiedDraw">Salvar alteracoes</button>
+
+      <div class="result-panel" v-if="teamPreto.length && teamVermelho.length">
+        <div class="result-title">Placar da partida</div>
+
+        <div v-if="mustResort" class="resort-warning">
+          🔁 Um time venceu 2 vezes nesta rodada! Sorteie o <strong>time base</strong> novamente para liberar a proxima partida.
+          <button class="btn-resort" @click="sortBaseTeams">Sortear time base novamente</button>
+        </div>
+
+        <template v-else>
+          <div class="score-row">
+            <span class="score-team preto">Preto</span>
+            <input type="number" min="0" class="score-input" v-model.number="scorePreto" placeholder="0" />
+            <span class="score-x">x</span>
+            <input type="number" min="0" class="score-input" v-model.number="scoreVermelho" placeholder="0" />
+            <span class="score-team vermelho">Vermelho</span>
+          </div>
+          <button class="btn-register" @click="registerMatch">Registrar partida</button>
+        </template>
+
+        <div class="session-record">
+          Vitorias nesta rodada &mdash;
+          <span class="rec-preto">Preto {{ sessionRecord.preto }}</span> x
+          <span class="rec-vermelho">{{ sessionRecord.vermelho }} Vermelho</span>
+          <span v-if="sessionRecord.empate" class="rec-empate"> ({{ sessionRecord.empate }} empate(s))</span>
+        </div>
       </div>
     </div>
 
@@ -666,16 +718,16 @@
     </div>
 
     <div class="history-section" v-if="history.length">
-      <h2>Historico de Sorteios</h2>
+      <h2>Historico de Sorteios (Time Base)</h2>
       <div class="history-item" v-for="(h, i) in history" :key="i">
         <div class="history-date">{{ h.date }}</div>
         <div class="history-teams">
           <div>
-            <h3 style="color:#ccc">Time Preto</h3>
+            <h3 style="color:#ccc">Base Preto</h3>
             <ul><li v-for="p in h.preto" :key="p">{{ p }}</li></ul>
           </div>
           <div>
-            <h3 style="color:#e94560">Time Vermelho</h3>
+            <h3 style="color:#e94560">Base Vermelho</h3>
             <ul><li v-for="p in h.vermelho" :key="p">{{ p }}</li></ul>
           </div>
         </div>
@@ -720,6 +772,7 @@
         if (p.active === undefined) p.active = true;
         if (p.confirmed === undefined) p.confirmed = false;
         if (p.guest === undefined) p.guest = false;
+        if (p.base === undefined) p.base = null;
         return p;
       }
       const old = p.rating || 3;
@@ -728,6 +781,7 @@
         active: true,
         confirmed: false,
         guest: false,
+        base: null,
         ratings: { geral: old, fisico: 3, finalizacao: 3, visao: 3, fominha: 3 }
       };
     }
@@ -777,14 +831,23 @@
         );
 
         const activePlayers = Vue.computed(() => players.value.filter(p => p.active));
-        // Draw pool for today: on the roster AND confirmed present
         const confirmedPlayers = Vue.computed(() => players.value.filter(p => p.active && p.confirmed));
-        // Base pool = confirmed regulars only (guests are NOT drawn into the base teams)
-        const baseCandidates = Vue.computed(() => players.value.filter(p => p.active && p.confirmed && !p.guest));
+        // Base pool = ALL active regulars (guests never enter the base draw; confirmation not required here)
+        const baseRegulars = Vue.computed(() => players.value.filter(p => p.active && !p.guest));
         const confirmedGuests = Vue.computed(() => players.value.filter(p => p.active && p.confirmed && p.guest));
 
+        // Base teams derive from each regular's stored base assignment
+        const baseSorted = Vue.computed(() => baseRegulars.value.some(p => p.base === 'preto' || p.base === 'vermelho'));
+        const baseTeamPreto = Vue.computed(() => baseRegulars.value.filter(p => p.base === 'preto'));
+        const baseTeamVermelho = Vue.computed(() => baseRegulars.value.filter(p => p.base === 'vermelho'));
+        const unassignedRegulars = Vue.computed(() => baseRegulars.value.filter(p => p.base !== 'preto' && p.base !== 'vermelho'));
+        // How many actually play today = confirmed base members + confirmed guests
+        const matchPlayerCount = Vue.computed(() =>
+          baseRegulars.value.filter(p => p.confirmed && (p.base === 'preto' || p.base === 'vermelho')).length + confirmedGuests.value.length
+        );
+
         const availableBlockPlayers = Vue.computed(() => {
-          return baseCandidates.value.filter(p => p.name !== blockPlayer1.value);
+          return baseRegulars.value.filter(p => p.name !== blockPlayer1.value);
         });
 
         watch(players, (val) => {
@@ -810,6 +873,7 @@
             active: true,
             confirmed: newGuest.value,   // guests are added because they're playing today
             guest: newGuest.value,
+            base: null,                  // set by the base draw (regulars only)
             ratings: { ...newRatings }
           });
           newName.value = '';
@@ -828,8 +892,15 @@
         }
 
         function newDay() {
-          if (!confirm('Iniciar um novo dia? Isso vai desmarcar a presenca de todos os jogadores (convidados sao mantidos na lista).')) return;
+          if (!confirm('Iniciar um novo dia? Desmarca a presenca de todos (o TIME BASE e mantido) e limpa os times da partida atuais.')) return;
           players.value.forEach(p => p.confirmed = false);
+          teamPreto.value = [];
+          teamVermelho.value = [];
+          currentDrawId.value = baseSorted.value ? Date.now() : null;
+          scorePreto.value = null;
+          scoreVermelho.value = null;
+          swapFrom.value = null;
+          localStorage.removeItem('sorteio_last_draw');
         }
 
         function removePlayer(index) {
@@ -889,13 +960,21 @@
           return team.reduce((sum, p) => sum + avgRating(p.ratings), 0);
         }
 
-        function sortTeams() {
-          // Previous base grouping (regulars only) so we can maximize the change
-          const prevA = teamPreto.value.filter(p => !p.guest).map(p => p.name);
-          const prevB = teamVermelho.value.filter(p => !p.guest).map(p => p.name);
+        function saveLastDraw() {
+          const draw = { id: currentDrawId.value, preto: teamPreto.value, vermelho: teamVermelho.value };
+          localStorage.setItem('sorteio_last_draw', JSON.stringify(draw));
+        }
 
-          // Base pool = confirmed regulars only. Guests are distributed later.
-          const all = baseCandidates.value.map(p => ({ name: p.name, ratings: { ...p.ratings }, guest: false }));
+        // DRAW 1: the base teams — ALL active regulars, persists until a team wins twice.
+        function sortBaseTeams() {
+          const pool = baseRegulars.value;
+          if (pool.length < 2) return;
+
+          // Previous base grouping so we can maximize the change
+          const prevA = pool.filter(p => p.base === 'preto').map(p => p.name);
+          const prevB = pool.filter(p => p.base === 'vermelho').map(p => p.name);
+
+          const all = pool.map(p => ({ name: p.name, ratings: { ...p.ratings } }));
           all.sort((a, b) => avgRating(b.ratings) - avgRating(a.ratings));
 
           let bestA = null, bestB = null, bestCost = Infinity;
@@ -906,7 +985,6 @@
             const shuffled = [...all];
 
             if (attempt > 0) {
-              // Shuffle players with similar avg to explore different arrangements
               for (let i = shuffled.length - 1; i > 0; i--) {
                 const j = Math.floor(Math.random() * (i + 1));
                 if (Math.abs(avgRating(shuffled[i].ratings) - avgRating(shuffled[j].ratings)) <= 0.5) {
@@ -915,7 +993,6 @@
               }
             }
 
-            // Snake draft for balance
             shuffled.forEach((p, i) => {
               const round = Math.floor(i / 2);
               const pick = i % 2;
@@ -929,9 +1006,9 @@
             if (!checkBlocks(a, b)) continue;
 
             const diff = Math.abs(teamScore(a) - teamScore(b));
-            // Balance first; among balanced options, prefer maximum change vs the last draw.
+            // Balance first; among balanced options, prefer maximum change vs the last base draw.
             const overlap = overlapCount(a, b, prevA, prevB);
-            const changeRatio = all.length ? overlap / all.length : 0; // 1 = unchanged, 0 = fully changed
+            const changeRatio = all.length ? overlap / all.length : 0;
             const cost = diff + 0.25 * changeRatio;
             if (cost < bestCost) {
               bestCost = cost;
@@ -976,11 +1053,45 @@
             bestB = b;
           }
 
-          // Auto-distribute confirmed guests to keep the teams balanced (size, then score)
+          // Random color, then store the base assignment on each regular
+          const [pretoArr, vermArr] = Math.random() < 0.5 ? [bestA, bestB] : [bestB, bestA];
+          const pretoNames = new Set(pretoArr.map(p => p.name));
+          const vermNames = new Set(vermArr.map(p => p.name));
+          players.value.forEach(p => {
+            if (pretoNames.has(p.name)) p.base = 'preto';
+            else if (vermNames.has(p.name)) p.base = 'vermelho';
+          });
+
+          currentDrawId.value = Date.now();
+
+          const now = new Date();
+          const dateStr = now.toLocaleDateString('pt-BR') + ' ' + now.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
+          history.value.unshift({
+            date: dateStr,
+            preto: pretoArr.map(p => p.name),
+            vermelho: vermArr.map(p => p.name)
+          });
+
+          // Build today's match teams from the fresh base
+          generateMatchTeams();
+        }
+
+        // DRAW 2: the match teams — confirmed base members + the day's guests (auto-distributed).
+        function generateMatchTeams() {
+          if (!baseSorted.value) { alert('Sorteie o time base primeiro.'); return; }
+
+          const basePreto = baseRegulars.value
+            .filter(p => p.confirmed && p.base === 'preto')
+            .map(p => ({ name: p.name, ratings: { ...p.ratings }, guest: false }));
+          const baseVerm = baseRegulars.value
+            .filter(p => p.confirmed && p.base === 'vermelho')
+            .map(p => ({ name: p.name, ratings: { ...p.ratings }, guest: false }));
+
+          // Auto-distribute confirmed guests to keep the match teams balanced (size, then score)
           const guests = confirmedGuests.value
             .map(p => ({ name: p.name, ratings: { ...p.ratings }, guest: true }))
             .sort((a, b) => avgRating(b.ratings) - avgRating(a.ratings));
-          const teamA = [...bestA], teamB = [...bestB];
+          const teamA = [...basePreto], teamB = [...baseVerm];
           let scoreA = teamScore(teamA), scoreB = teamScore(teamB);
           for (const g of guests) {
             let toA;
@@ -990,30 +1101,13 @@
             else { teamB.push(g); scoreB += avgRating(g.ratings); }
           }
 
-          if (Math.random() < 0.5) {
-            teamPreto.value = teamA;
-            teamVermelho.value = teamB;
-          } else {
-            teamPreto.value = teamB;
-            teamVermelho.value = teamA;
-          }
-
+          teamPreto.value = teamA;
+          teamVermelho.value = teamB;
           swapFrom.value = null;
           drawModified.value = false;
           scorePreto.value = null;
           scoreVermelho.value = null;
-          currentDrawId.value = Date.now();
-
-          const draw = { id: currentDrawId.value, preto: teamPreto.value, vermelho: teamVermelho.value };
-          localStorage.setItem('sorteio_last_draw', JSON.stringify(draw));
-
-          const now = new Date();
-          const dateStr = now.toLocaleDateString('pt-BR') + ' ' + now.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
-          history.value.unshift({
-            date: dateStr,
-            preto: teamPreto.value.map(p => p.name),
-            vermelho: teamVermelho.value.map(p => p.name)
-          });
+          saveLastDraw();
         }
 
         function selectSwap(team, index) {
@@ -1045,12 +1139,7 @@
         }
 
         function saveModifiedDraw() {
-          const draw = { id: currentDrawId.value, preto: teamPreto.value, vermelho: teamVermelho.value };
-          localStorage.setItem('sorteio_last_draw', JSON.stringify(draw));
-          if (history.value.length) {
-            history.value[0].preto = teamPreto.value.map(p => p.name);
-            history.value[0].vermelho = teamVermelho.value.map(p => p.name);
-          }
+          saveLastDraw();
           drawModified.value = false;
         }
 
@@ -1164,12 +1253,14 @@
           players, newName, newRatings, teamPreto, teamVermelho,
           editingIndex, editRatings, history, swapFrom, drawModified,
           blocks, blockPlayer1, blockPlayer2, availableBlockPlayers, activePlayers,
-          newGuest, confirmedPlayers, baseCandidates, confirmedGuests,
+          newGuest, confirmedPlayers, confirmedGuests,
+          baseRegulars, baseSorted, baseTeamPreto, baseTeamVermelho, unassignedRegulars, matchPlayerCount,
           matches, scorePreto, scoreVermelho, sessionRecord, mustResort,
           categories: CATEGORIES,
-          addPlayer, removePlayer, toggleActive, toggleEdit, saveRatings, sortTeams,
+          addPlayer, removePlayer, toggleActive, toggleEdit, saveRatings,
           toggleConfirm, confirmAll, newDay,
           addBlock, removeBlock, selectSwap, saveModifiedDraw, clearHistory,
+          sortBaseTeams, generateMatchTeams,
           registerMatch, removeMatch, clearMatches,
           exportData, importData
         };
