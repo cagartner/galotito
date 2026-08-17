@@ -1,7 +1,7 @@
 {
-  "tool_name": "mcp__Claude_Browser__computer",
-  "tool_input_preview": "{\"action\":\"scroll\",\"coordinate\":[340,500],\"scroll_direction\":\"down\",\"scroll_amount\":6,\"tabId\":\"seed\"}",
-  "error": "`scroll` with `coordinate` requires a prior computer{action:\"screenshot\"}",
-  "timestamp": "2026-08-17T21:13:21.391Z",
+  "tool_name": "mcp__Claude_Browser__find",
+  "tool_input_preview": "{\"query\":\"Usar esta base button on the 18:00 history entry\",\"tabId\":\"seed\"}",
+  "error": "no read_page tree cached; call read_page first",
+  "timestamp": "2026-08-17T21:32:51.690Z",
   "retry_count": 1
 }
