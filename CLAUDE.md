@@ -25,15 +25,30 @@ jogador, confirmação por dia, convidados, placar por partida, classificação 
   O Pages reconstrói em ~1 min. Verificar build: `gh api repos/cagartner/galotito/pages/builds/latest --jq '.status'`.
   Atenção: há duas contas gh (`cagartner-id` e `cagartner`); usar a pessoal `cagartner` (`gh auth switch --user cagartner`).
 
-## Modelo de dados (localStorage)
+## Patotas (dias): Segunda e Quarta
 
-| Chave | Conteúdo |
-|-------|----------|
-| `sorteio_players` | Array de jogadores (ver abaixo) — **fonte de verdade** de base/confirmação/convidado |
-| `sorteio_blocks` | Array de pares `[nomeA, nomeB]` que não podem jogar juntos |
-| `sorteio_history` | Histórico de **sorteios de base** `{date, preto:[nomes], vermelho:[nomes]}` |
-| `sorteio_matches` | Histórico de **partidas** `{drawId, date, preto:[nomes], vermelho:[nomes], scorePreto, scoreVermelho, winner}` |
-| `sorteio_last_draw` | Times da partida atuais `{id, preto:[obj], vermelho:[obj]}` (`id` = id da sessão de base) |
+O app gerencia **duas patotas independentes** (`DAYS = ['segunda','quarta']`), cada uma com seu
+conjunto completo e separado de dados. Dois botões no topo (`.day-switcher`) alternam a patota ativa.
+
+- **Namespacing:** todas as chaves são prefixadas por dia → `sorteio_<dia>_<nome>` (ex.: `sorteio_quarta_players`). `storeKey(name)` gera a chave da patota ativa; `sorteio_day` guarda a patota selecionada.
+- **Migração:** dados legados sem prefixo (`sorteio_players`, etc.) são migrados **uma vez** para a Segunda (`migrateLegacyToSegunda`, roda antes do `createApp`).
+- **Troca de patota (`switchDay`):** grava o dia atual **de forma síncrona** (`saveCurrentDay`), levanta `suspendPersist`, troca `currentDay`, recarrega todos os refs das chaves do novo dia e limpa o estado transitório de UI. `Vue.nextTick` baixa `suspendPersist`.
+- **`suspendPersist` (importante):** os 4 watchers de persistência são **assíncronos** (`flush:'pre'`); sem essa trava, adicionar algo e trocar de dia rápido fazia a gravação vazar para o dia errado (corrida). Os watchers checam `if (suspendPersist) return`. **Nunca remova essa proteção nem torne `switchDay` assíncrono sem revisar essa corrida.**
+- Export/Import operam sobre a **patota ativa** (o backup inclui `day` e o nome do arquivo tem o dia).
+
+## Modelo de dados (localStorage, por patota)
+
+Chaves reais = `sorteio_<dia>_<nome>`. Conteúdo de cada `<nome>`:
+
+| Nome | Conteúdo |
+|------|----------|
+| `players` | Array de jogadores (ver abaixo) — **fonte de verdade** de base/confirmação/convidado |
+| `blocks` | Array de pares `[nomeA, nomeB]` que não podem jogar juntos |
+| `history` | Histórico de **sorteios de base** `{date, preto:[nomes], vermelho:[nomes]}` |
+| `matches` | Histórico de **partidas** `{drawId, date, preto:[nomes], vermelho:[nomes], scorePreto, scoreVermelho, winner}` |
+| `last_draw` | Times da partida atuais `{id, preto:[obj], vermelho:[obj]}` (`id` = id da sessão de base) |
+
+Fora do namespace: `sorteio_day` (patota ativa).
 
 ### Objeto do jogador
 ```js

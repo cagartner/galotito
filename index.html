@@ -17,6 +17,29 @@
     h1 { text-align: center; margin-bottom: 24px; font-size: 1.8rem; }
     .container { max-width: 800px; margin: 0 auto; }
 
+    /* Day switcher (patota) */
+    .day-switcher {
+      display: flex;
+      gap: 6px;
+      background: #16213e;
+      border-radius: 10px;
+      padding: 5px;
+      margin-bottom: 16px;
+    }
+    .day-switcher button {
+      flex: 1;
+      background: transparent;
+      color: #aaa;
+      border-radius: 7px;
+      padding: 10px;
+      font-size: 1rem;
+      font-weight: 700;
+    }
+    .day-switcher button.active {
+      background: #e94560;
+      color: #fff;
+    }
+
     /* Data toolbar */
     .data-toolbar {
       display: flex;
@@ -520,6 +543,16 @@
   <div id="app" class="container">
     <h1>Sorteio de Times</h1>
 
+    <div class="day-switcher">
+      <button
+        v-for="d in days"
+        :key="d"
+        type="button"
+        :class="{ active: currentDay === d }"
+        @click="switchDay(d)"
+      >{{ dayLabels[d] }}</button>
+    </div>
+
     <div class="data-toolbar">
       <button type="button" class="btn-data" @click="exportData">&#11015; Exportar dados</button>
       <label class="btn-data">
@@ -855,10 +888,31 @@
       };
     }
 
+    // Each "patota" (day) keeps its own separate dataset under namespaced keys.
+    const DAYS = ['segunda', 'quarta'];
+    const DAY_LABELS = { segunda: 'Segunda', quarta: 'Quarta' };
+    const STORE_NAMES = ['players', 'blocks', 'history', 'matches', 'last_draw'];
+
+    // One-time migration: existing (unprefixed) data becomes the Monday patota.
+    (function migrateLegacyToSegunda() {
+      const alreadyMigrated = STORE_NAMES.some(n => localStorage.getItem('sorteio_segunda_' + n) !== null);
+      if (alreadyMigrated) return;
+      STORE_NAMES.forEach(n => {
+        const old = localStorage.getItem('sorteio_' + n);
+        if (old !== null) {
+          localStorage.setItem('sorteio_segunda_' + n, old);
+          localStorage.removeItem('sorteio_' + n);
+        }
+      });
+    })();
+
     createApp({
       setup() {
-        const raw = JSON.parse(localStorage.getItem('sorteio_players') || '[]');
-        const players = ref(raw.map(migratePlayer));
+        const currentDay = ref(DAYS.includes(localStorage.getItem('sorteio_day')) ? localStorage.getItem('sorteio_day') : 'segunda');
+        const storeKey = (name) => 'sorteio_' + currentDay.value + '_' + name;
+        const load = (name, fallback) => JSON.parse(localStorage.getItem(storeKey(name)) || fallback);
+
+        const players = ref(load('players', '[]').map(migratePlayer));
         const newName = ref('');
         const newGuest = ref(false);
         const newRatings = reactive(defaultRatings());
@@ -866,22 +920,63 @@
         const teamVermelho = ref([]);
         const editingIndex = ref(-1);
         const editRatings = reactive(defaultRatings());
-        const history = ref(JSON.parse(localStorage.getItem('sorteio_history') || '[]'));
-        const matches = ref(JSON.parse(localStorage.getItem('sorteio_matches') || '[]'));
+        const history = ref(load('history', '[]'));
+        const matches = ref(load('matches', '[]'));
         const scorePreto = ref(null);
         const scoreVermelho = ref(null);
         const swapFrom = ref(null);
         const drawModified = ref(false);
-        const blocks = ref(JSON.parse(localStorage.getItem('sorteio_blocks') || '[]'));
+        const blocks = ref(load('blocks', '[]'));
         const blockPlayer1 = ref('');
         const blockPlayer2 = ref('');
 
         // Restore last draw
-        const lastDraw = JSON.parse(localStorage.getItem('sorteio_last_draw') || 'null');
+        const lastDraw = load('last_draw', 'null');
         const currentDrawId = ref(lastDraw && lastDraw.id ? lastDraw.id : null);
         if (lastDraw) {
           teamPreto.value = lastDraw.preto;
           teamVermelho.value = lastDraw.vermelho;
+        }
+
+        let suspendPersist = false;
+
+        // Flush the current day's data to its keys synchronously (avoids async watcher races)
+        function saveCurrentDay() {
+          localStorage.setItem(storeKey('players'), JSON.stringify(players.value));
+          localStorage.setItem(storeKey('blocks'), JSON.stringify(blocks.value));
+          localStorage.setItem(storeKey('history'), JSON.stringify(history.value));
+          localStorage.setItem(storeKey('matches'), JSON.stringify(matches.value));
+          localStorage.setItem(storeKey('last_draw'), JSON.stringify({
+            id: currentDrawId.value, preto: teamPreto.value, vermelho: teamVermelho.value
+          }));
+        }
+
+        // Switch patota (day): save current day synchronously, then reload from that day's keys
+        function switchDay(day) {
+          if (day === currentDay.value || !DAYS.includes(day)) return;
+          saveCurrentDay();          // persist the outgoing day from current refs (sync)
+          suspendPersist = true;     // stop async watchers from writing during the swap
+          currentDay.value = day;
+          localStorage.setItem('sorteio_day', day);
+          players.value = load('players', '[]').map(migratePlayer);
+          blocks.value = load('blocks', '[]');
+          history.value = load('history', '[]');
+          matches.value = load('matches', '[]');
+          const ld = load('last_draw', 'null');
+          teamPreto.value = ld && ld.preto ? ld.preto : [];
+          teamVermelho.value = ld && ld.vermelho ? ld.vermelho : [];
+          currentDrawId.value = ld && ld.id ? ld.id : null;
+          // reset transient UI state
+          editingIndex.value = -1;
+          swapFrom.value = null;
+          drawModified.value = false;
+          scorePreto.value = null;
+          scoreVermelho.value = null;
+          blockPlayer1.value = '';
+          blockPlayer2.value = '';
+          newName.value = '';
+          newGuest.value = false;
+          Vue.nextTick(() => { suspendPersist = false; });
         }
 
         // Win tally for the current teams (matches recorded since the last sort)
@@ -944,19 +1039,23 @@
         });
 
         watch(players, (val) => {
-          localStorage.setItem('sorteio_players', JSON.stringify(val));
+          if (suspendPersist) return;
+          localStorage.setItem(storeKey('players'), JSON.stringify(val));
         }, { deep: true });
 
         watch(blocks, (val) => {
-          localStorage.setItem('sorteio_blocks', JSON.stringify(val));
+          if (suspendPersist) return;
+          localStorage.setItem(storeKey('blocks'), JSON.stringify(val));
         }, { deep: true });
 
         watch(history, (val) => {
-          localStorage.setItem('sorteio_history', JSON.stringify(val));
+          if (suspendPersist) return;
+          localStorage.setItem(storeKey('history'), JSON.stringify(val));
         }, { deep: true });
 
         watch(matches, (val) => {
-          localStorage.setItem('sorteio_matches', JSON.stringify(val));
+          if (suspendPersist) return;
+          localStorage.setItem(storeKey('matches'), JSON.stringify(val));
         }, { deep: true });
 
         function addPlayer() {
@@ -993,7 +1092,7 @@
           scorePreto.value = null;
           scoreVermelho.value = null;
           swapFrom.value = null;
-          localStorage.removeItem('sorteio_last_draw');
+          localStorage.removeItem(storeKey('last_draw'));
         }
 
         function removePlayer(index) {
@@ -1084,7 +1183,7 @@
 
         function saveLastDraw() {
           const draw = { id: currentDrawId.value, preto: teamPreto.value, vermelho: teamVermelho.value };
-          localStorage.setItem('sorteio_last_draw', JSON.stringify(draw));
+          localStorage.setItem(storeKey('last_draw'), JSON.stringify(draw));
         }
 
         // DRAW 1: the base teams — ALL active regulars, persists until a team wins twice.
@@ -1306,13 +1405,13 @@
         function clearMatches() {
           if (!confirm('Limpar todo o historico de partidas (e a classificacao)?')) return;
           matches.value = [];
-          localStorage.removeItem('sorteio_matches');
+          localStorage.removeItem(storeKey('matches'));
         }
 
         function clearHistory() {
           if (!confirm('Limpar todo o historico de sorteios de base?')) return;
           history.value = [];
-          localStorage.removeItem('sorteio_history');
+          localStorage.removeItem(storeKey('history'));
         }
 
         function removeHistory(index) {
@@ -1323,6 +1422,7 @@
           const data = {
             app: 'sorteio-de-times',
             version: 1,
+            day: currentDay.value,
             exportedAt: new Date().toISOString(),
             players: players.value,
             blocks: blocks.value,
@@ -1335,7 +1435,7 @@
           const a = document.createElement('a');
           const stamp = new Date().toISOString().slice(0, 10);
           a.href = url;
-          a.download = `sorteio-backup-${stamp}.json`;
+          a.download = `sorteio-${currentDay.value}-backup-${stamp}.json`;
           a.click();
           URL.revokeObjectURL(url);
         }
@@ -1351,7 +1451,7 @@
                 alert('Arquivo invalido: nao contem jogadores.');
                 return;
               }
-              if (!confirm('Isso vai substituir TODOS os dados atuais (jogadores, bloqueios e historico). Continuar?')) return;
+              if (!confirm('Isso vai substituir os dados da patota atual (' + DAY_LABELS[currentDay.value] + '). Continuar?')) return;
 
               players.value = data.players.map(migratePlayer);
               blocks.value = Array.isArray(data.blocks) ? data.blocks : [];
@@ -1362,14 +1462,14 @@
                 teamPreto.value = data.lastDraw.preto;
                 teamVermelho.value = Array.isArray(data.lastDraw.vermelho) ? data.lastDraw.vermelho : [];
                 currentDrawId.value = data.lastDraw.id || null;
-                localStorage.setItem('sorteio_last_draw', JSON.stringify({
+                localStorage.setItem(storeKey('last_draw'), JSON.stringify({
                   id: currentDrawId.value, preto: teamPreto.value, vermelho: teamVermelho.value
                 }));
               } else {
                 teamPreto.value = [];
                 teamVermelho.value = [];
                 currentDrawId.value = null;
-                localStorage.removeItem('sorteio_last_draw');
+                localStorage.removeItem(storeKey('last_draw'));
               }
 
               swapFrom.value = null;
@@ -1385,6 +1485,7 @@
         }
 
         return {
+          currentDay, switchDay, dayLabels: DAY_LABELS, days: DAYS,
           players, newName, newRatings, teamPreto, teamVermelho,
           editingIndex, editRatings, history, swapFrom, drawModified,
           blocks, blockPlayer1, blockPlayer2, availableBlockPlayers, activePlayers,
