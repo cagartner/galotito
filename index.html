@@ -285,6 +285,15 @@
       margin-left: 8px;
       vertical-align: middle;
     }
+    .team-extra {
+      font-size: 0.65rem;
+      color: #4fc3f7;
+      border: 1px solid #4fc3f7;
+      border-radius: 5px;
+      padding: 0 5px;
+      margin-left: 8px;
+      vertical-align: middle;
+    }
     .team li.selected-swap {
       background: rgba(233, 69, 96, 0.3);
       outline: 2px solid #e94560;
@@ -625,7 +634,7 @@
         </div>
       </div>
       <p v-if="baseSorted && unassignedRegulars.length" class="hint-small">
-        Fora do time base: {{ unassignedRegulars.map(p => p.name).join(', ') }} &mdash; sorteie o time base de novo para incluir.
+        Fora do time base: {{ unassignedRegulars.map(p => p.name).join(', ') }} &mdash; se confirmados, entram na partida como convidados (ou sorteie o time base de novo para incluir na base).
       </p>
     </div>
 
@@ -646,7 +655,7 @@
               :key="p.name"
               :class="{ 'selected-swap': swapFrom && swapFrom.team === 'preto' && swapFrom.index === i }"
               @click="selectSwap('preto', i)"
-            ><span>{{ p.name }}<span v-if="p.guest" class="team-guest">conv.</span></span></li>
+            ><span>{{ p.name }}<span v-if="p.guest" class="team-guest">conv.</span><span v-else-if="p.floater" class="team-extra">extra</span></span></li>
           </ul>
         </div>
         <div class="team team-vermelho">
@@ -657,7 +666,7 @@
               :key="p.name"
               :class="{ 'selected-swap': swapFrom && swapFrom.team === 'vermelho' && swapFrom.index === i }"
               @click="selectSwap('vermelho', i)"
-            ><span>{{ p.name }}<span v-if="p.guest" class="team-guest">conv.</span></span></li>
+            ><span>{{ p.name }}<span v-if="p.guest" class="team-guest">conv.</span><span v-else-if="p.floater" class="team-extra">extra</span></span></li>
           </ul>
         </div>
       </div>
@@ -841,10 +850,8 @@
         const baseTeamPreto = Vue.computed(() => baseRegulars.value.filter(p => p.base === 'preto'));
         const baseTeamVermelho = Vue.computed(() => baseRegulars.value.filter(p => p.base === 'vermelho'));
         const unassignedRegulars = Vue.computed(() => baseRegulars.value.filter(p => p.base !== 'preto' && p.base !== 'vermelho'));
-        // How many actually play today = confirmed base members + confirmed guests
-        const matchPlayerCount = Vue.computed(() =>
-          baseRegulars.value.filter(p => p.confirmed && (p.base === 'preto' || p.base === 'vermelho')).length + confirmedGuests.value.length
-        );
+        // Everyone confirmed plays: base members + recovered regulars (as guests) + real guests
+        const matchPlayerCount = Vue.computed(() => confirmedPlayers.value.length);
 
         const availableBlockPlayers = Vue.computed(() => {
           return baseRegulars.value.filter(p => p.name !== blockPlayer1.value);
@@ -1060,6 +1067,7 @@
           players.value.forEach(p => {
             if (pretoNames.has(p.name)) p.base = 'preto';
             else if (vermNames.has(p.name)) p.base = 'vermelho';
+            else p.base = null; // injured/guest at draw time -> no base (plays as guest if they return)
           });
 
           currentDrawId.value = Date.now();
@@ -1087,13 +1095,19 @@
             .filter(p => p.confirmed && p.base === 'vermelho')
             .map(p => ({ name: p.name, ratings: { ...p.ratings }, guest: false }));
 
-          // Auto-distribute confirmed guests to keep the match teams balanced (size, then score)
+          // Confirmed regulars with NO base team (they were injured during the base draw and
+          // are now available again) are treated like guests: auto-distributed into the match.
+          const floaters = baseRegulars.value
+            .filter(p => p.confirmed && p.base !== 'preto' && p.base !== 'vermelho')
+            .map(p => ({ name: p.name, ratings: { ...p.ratings }, guest: false, floater: true }));
           const guests = confirmedGuests.value
-            .map(p => ({ name: p.name, ratings: { ...p.ratings }, guest: true }))
-            .sort((a, b) => avgRating(b.ratings) - avgRating(a.ratings));
+            .map(p => ({ name: p.name, ratings: { ...p.ratings }, guest: true }));
+
+          // Distribute floaters + guests to keep the match teams balanced (size, then score)
+          const extras = [...floaters, ...guests].sort((a, b) => avgRating(b.ratings) - avgRating(a.ratings));
           const teamA = [...basePreto], teamB = [...baseVerm];
           let scoreA = teamScore(teamA), scoreB = teamScore(teamB);
-          for (const g of guests) {
+          for (const g of extras) {
             let toA;
             if (teamA.length !== teamB.length) toA = teamA.length < teamB.length;
             else toA = scoreA <= scoreB;
