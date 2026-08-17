@@ -1,0 +1,1180 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Sorteio de Times</title>
+  <script src="https://unpkg.com/vue@3/dist/vue.global.js"></script>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: 'Segoe UI', sans-serif;
+      background: #1a1a2e;
+      color: #eee;
+      min-height: 100vh;
+      padding: 20px;
+    }
+    h1 { text-align: center; margin-bottom: 24px; font-size: 1.8rem; }
+    .container { max-width: 800px; margin: 0 auto; }
+
+    /* Data toolbar */
+    .data-toolbar {
+      display: flex;
+      gap: 8px;
+      justify-content: center;
+      margin-bottom: 20px;
+      flex-wrap: wrap;
+    }
+    .btn-data {
+      background: #16213e;
+      color: #aaa;
+      border: 1px solid #0f3460;
+      font-size: 0.85rem;
+      padding: 8px 14px;
+      border-radius: 8px;
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      font-weight: 600;
+      transition: opacity 0.2s;
+    }
+    .btn-data:hover { opacity: 0.85; }
+
+    /* Form */
+    .add-player {
+      background: #16213e;
+      border-radius: 12px;
+      padding: 16px;
+      margin-bottom: 24px;
+    }
+    .add-player input {
+      width: 100%;
+      padding: 10px 14px;
+      border: none;
+      border-radius: 8px;
+      font-size: 1rem;
+      background: #1a1a2e;
+      color: #eee;
+      outline: none;
+      margin-bottom: 12px;
+    }
+    .add-player input:focus { box-shadow: 0 0 0 2px #e94560; }
+    .ratings-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 8px 16px;
+      margin-bottom: 12px;
+    }
+    .rating-row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 6px;
+    }
+    .rating-row .label { font-size: 0.8rem; color: #aaa; white-space: nowrap; min-width: 90px; }
+    .rating-stars { display: flex; gap: 2px; }
+    .star {
+      cursor: pointer;
+      font-size: 1.2rem;
+      color: #444;
+      transition: color 0.15s;
+    }
+    .star.active { color: #f5c518; }
+    .star:hover { color: #f5c518; }
+    button {
+      padding: 10px 20px;
+      border: none;
+      border-radius: 8px;
+      font-size: 1rem;
+      cursor: pointer;
+      font-weight: 600;
+      transition: opacity 0.2s;
+    }
+    button:hover { opacity: 0.85; }
+    .btn-add { background: #e94560; color: #fff; width: 100%; }
+    .btn-sort { background: #0f3460; color: #fff; width: 100%; padding: 14px; font-size: 1.1rem; margin-bottom: 24px; }
+    .btn-sort-alert { background: #e94560; animation: pulse 1.2s infinite; }
+    @keyframes pulse { 0%,100% { opacity: 1; } 50% { opacity: 0.7; } }
+
+    /* Guest checkbox in add form */
+    .guest-checkbox {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      font-size: 0.9rem;
+      color: #aaa;
+      margin-bottom: 12px;
+      cursor: pointer;
+    }
+    .guest-checkbox input { width: 16px; height: 16px; accent-color: #e94560; cursor: pointer; }
+
+    /* Player list */
+    .players-section h2 { margin-bottom: 12px; font-size: 1.1rem; color: #aaa; }
+    .players-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 8px;
+      margin-bottom: 12px;
+      flex-wrap: wrap;
+    }
+    .players-header h2 { margin-bottom: 0; }
+    .players-header .muted { color: #666; font-weight: 400; font-size: 0.9rem; }
+    .players-header-actions { display: flex; gap: 6px; }
+    .btn-mini {
+      background: #0f3460;
+      color: #fff;
+      font-size: 0.75rem;
+      padding: 6px 10px;
+    }
+    .confirm-check {
+      width: 22px;
+      height: 22px;
+      border-radius: 6px;
+      border: 2px solid #555;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 0.9rem;
+      color: #fff;
+      cursor: pointer;
+      flex-shrink: 0;
+      margin-right: 10px;
+      transition: background 0.15s, border-color 0.15s;
+    }
+    .confirm-check.on { background: #2e7d32; border-color: #2e7d32; }
+    .confirm-check.off { cursor: not-allowed; opacity: 0.4; }
+    .player-item.is-confirmed { border-left: 3px solid #2e7d32; }
+    .guest-tag {
+      font-size: 0.7rem;
+      color: #f5c518;
+      border: 1px solid #f5c518;
+      border-radius: 6px;
+      padding: 1px 6px;
+      margin: 0 8px;
+      white-space: nowrap;
+    }
+    .player-list { list-style: none; margin-bottom: 24px; }
+    .player-item {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 10px 14px;
+      background: #16213e;
+      border-radius: 8px;
+      margin-bottom: 6px;
+    }
+    .player-item .name { flex: 1; }
+    .player-item.disabled .name { color: #777; text-decoration: line-through; }
+    .player-item.disabled { opacity: 0.7; }
+    .injured-tag {
+      font-size: 0.7rem;
+      color: #e94560;
+      border: 1px solid #e94560;
+      border-radius: 6px;
+      padding: 1px 6px;
+      margin: 0 8px;
+      white-space: nowrap;
+    }
+    .player-item .actions { display: flex; align-items: center; gap: 4px; }
+    .btn-toggle {
+      background: transparent;
+      color: #4caf50;
+      font-size: 1rem;
+      padding: 4px 8px;
+    }
+    .btn-toggle.off { color: #888; }
+    .btn-edit {
+      background: transparent;
+      color: #f5c518;
+      font-size: 1rem;
+      padding: 4px 8px;
+    }
+    .btn-remove {
+      background: transparent;
+      color: #e94560;
+      font-size: 1.2rem;
+      padding: 4px 8px;
+    }
+
+    /* Edit ratings panel */
+    .edit-panel {
+      background: #0f1a30;
+      border-radius: 8px;
+      padding: 12px 14px;
+      margin-bottom: 6px;
+    }
+    .edit-panel .edit-title {
+      font-size: 0.85rem;
+      color: #f5c518;
+      margin-bottom: 8px;
+    }
+    .edit-ratings-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 6px 16px;
+      margin-bottom: 10px;
+    }
+    .edit-rating-row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 6px;
+    }
+    .edit-rating-row .label { font-size: 0.75rem; color: #aaa; min-width: 90px; }
+    .edit-rating-row .rating-stars .star { font-size: 1rem; }
+    .btn-save-rating {
+      background: #0f3460;
+      color: #fff;
+      font-size: 0.8rem;
+      padding: 6px 16px;
+      width: 100%;
+    }
+
+    /* Teams */
+    .teams { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-bottom: 24px; }
+    .team {
+      border-radius: 12px;
+      padding: 16px;
+      min-height: 120px;
+    }
+    .team-preto { background: #111; border: 2px solid #444; }
+    .team-vermelho { background: #3a0a0a; border: 2px solid #e94560; }
+    .team h2 {
+      text-align: center;
+      margin-bottom: 12px;
+      font-size: 1.2rem;
+    }
+    .team-preto h2 { color: #ccc; }
+    .team-vermelho h2 { color: #e94560; }
+    .team ul { list-style: none; }
+    .team li {
+      padding: 6px 8px;
+      border-bottom: 1px solid rgba(255,255,255,0.1);
+      cursor: pointer;
+      border-radius: 4px;
+      transition: background 0.15s;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+    .team li:hover { background: rgba(255,255,255,0.05); }
+    .team li:last-child { border-bottom: none; }
+    .team-guest {
+      font-size: 0.65rem;
+      color: #f5c518;
+      border: 1px solid #f5c518;
+      border-radius: 5px;
+      padding: 0 5px;
+      margin-left: 8px;
+      vertical-align: middle;
+    }
+    .team li.selected-swap {
+      background: rgba(233, 69, 96, 0.3);
+      outline: 2px solid #e94560;
+    }
+    .swap-hint {
+      text-align: center;
+      font-size: 0.8rem;
+      color: #f5c518;
+      margin-top: 8px;
+      padding: 6px;
+      background: rgba(245, 197, 24, 0.1);
+      border-radius: 6px;
+    }
+    .btn-save-draw {
+      background: #0f3460;
+      color: #fff;
+      width: 100%;
+      padding: 10px;
+      font-size: 0.95rem;
+      margin-bottom: 16px;
+    }
+
+    .empty-msg { text-align: center; color: #555; padding: 20px; }
+
+    /* Result / score entry */
+    .result-panel {
+      background: #16213e;
+      border-radius: 12px;
+      padding: 16px;
+      margin-bottom: 24px;
+    }
+    .result-title { font-size: 1rem; color: #aaa; margin-bottom: 12px; text-align: center; }
+    .score-row {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 10px;
+      margin-bottom: 14px;
+      flex-wrap: wrap;
+    }
+    .score-team { font-weight: 700; font-size: 0.95rem; }
+    .score-team.preto { color: #ccc; }
+    .score-team.vermelho { color: #e94560; }
+    .score-input {
+      width: 56px;
+      padding: 10px;
+      border: none;
+      border-radius: 8px;
+      font-size: 1.2rem;
+      text-align: center;
+      background: #1a1a2e;
+      color: #eee;
+      outline: none;
+    }
+    .score-input:focus { box-shadow: 0 0 0 2px #e94560; }
+    .score-x { color: #666; font-weight: 700; }
+    .btn-register { background: #0f3460; color: #fff; width: 100%; padding: 12px; }
+    .resort-warning {
+      background: rgba(233, 69, 96, 0.15);
+      border: 1px solid #e94560;
+      color: #ffb3c0;
+      border-radius: 8px;
+      padding: 14px;
+      text-align: center;
+      font-size: 0.9rem;
+      margin-bottom: 4px;
+    }
+    .btn-resort {
+      background: #e94560;
+      color: #fff;
+      width: 100%;
+      padding: 12px;
+      margin-top: 12px;
+      font-size: 1rem;
+    }
+    .session-record {
+      text-align: center;
+      font-size: 0.9rem;
+      color: #ccc;
+      margin-top: 12px;
+      padding-top: 12px;
+      border-top: 1px solid rgba(255,255,255,0.1);
+    }
+    .session-record .rec-preto { color: #ccc; font-weight: 700; }
+    .session-record .rec-vermelho { color: #e94560; font-weight: 700; }
+    .session-record .rec-empate { color: #888; }
+
+    /* Match history */
+    .match-item {
+      background: #16213e;
+      border-radius: 8px;
+      padding: 14px;
+      margin-bottom: 10px;
+    }
+    .match-top {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 8px;
+    }
+    .match-date { font-size: 0.8rem; color: #666; }
+    .match-score {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 14px;
+      margin-bottom: 10px;
+    }
+    .match-score .team-label { font-size: 0.9rem; color: #888; font-weight: 600; }
+    .match-score .team-label.winner { text-decoration: none; }
+    .match-score .team-label.preto.winner { color: #fff; }
+    .match-score .team-label.vermelho.winner { color: #e94560; }
+    .match-score .team-label.winner::after { content: ' 🏆'; }
+    .match-score .score-num { font-size: 1.4rem; font-weight: 700; color: #eee; }
+    .match-teams { font-size: 0.8rem; color: #999; }
+    .match-teams strong { color: #bbb; }
+
+    /* History */
+    .history-section { margin-top: 16px; }
+    .history-section h2 { margin-bottom: 12px; font-size: 1.1rem; color: #aaa; }
+    .history-item {
+      background: #16213e;
+      border-radius: 8px;
+      padding: 14px;
+      margin-bottom: 10px;
+    }
+    .history-item .history-date {
+      font-size: 0.8rem;
+      color: #666;
+      margin-bottom: 8px;
+    }
+    .history-teams {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 10px;
+    }
+    .history-teams h3 {
+      font-size: 0.9rem;
+      margin-bottom: 4px;
+    }
+    .history-teams ul { list-style: none; font-size: 0.85rem; color: #ccc; }
+    .history-teams li { padding: 2px 0; }
+    .btn-clear-history {
+      background: transparent;
+      color: #e94560;
+      font-size: 0.85rem;
+      padding: 6px 12px;
+      border: 1px solid #e94560;
+      margin-top: 8px;
+    }
+
+    /* Blocks */
+    .blocks-section { margin-bottom: 24px; }
+    .blocks-section h2 { margin-bottom: 12px; font-size: 1.1rem; color: #aaa; }
+    .block-form {
+      display: flex;
+      gap: 8px;
+      align-items: center;
+      margin-bottom: 12px;
+      flex-wrap: wrap;
+    }
+    .block-form select {
+      flex: 1;
+      min-width: 120px;
+      padding: 8px 10px;
+      border: none;
+      border-radius: 8px;
+      font-size: 0.9rem;
+      background: #16213e;
+      color: #eee;
+      outline: none;
+    }
+    .block-form select:focus { box-shadow: 0 0 0 2px #e94560; }
+    .block-form .block-separator { color: #666; font-size: 0.85rem; }
+    .btn-block { background: #e94560; color: #fff; font-size: 0.85rem; padding: 8px 14px; }
+    .block-list { list-style: none; }
+    .block-item {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 8px 14px;
+      background: #16213e;
+      border-radius: 8px;
+      margin-bottom: 6px;
+      font-size: 0.9rem;
+    }
+    .block-item .block-names { color: #ccc; }
+    .block-item .block-vs { color: #e94560; margin: 0 6px; }
+
+    @media (max-width: 500px) {
+      .teams, .history-teams { grid-template-columns: 1fr; }
+      .ratings-grid, .edit-ratings-grid { grid-template-columns: 1fr; }
+    }
+  </style>
+</head>
+<body>
+  <div id="app" class="container">
+    <h1>Sorteio de Times</h1>
+
+    <div class="data-toolbar">
+      <button type="button" class="btn-data" @click="exportData">&#11015; Exportar dados</button>
+      <label class="btn-data">
+        &#11014; Importar dados
+        <input type="file" accept="application/json,.json" @change="importData" hidden />
+      </label>
+    </div>
+
+    <form class="add-player" @submit.prevent="addPlayer">
+      <input v-model.trim="newName" placeholder="Nome do jogador" />
+      <div class="ratings-grid">
+        <div class="rating-row" v-for="cat in categories" :key="cat.key">
+          <span class="label">{{ cat.label }}</span>
+          <div class="rating-stars">
+            <span
+              v-for="n in 5"
+              :key="n"
+              class="star"
+              :class="{ active: n <= newRatings[cat.key] }"
+              @click="newRatings[cat.key] = n"
+            >&#9733;</span>
+          </div>
+        </div>
+      </div>
+      <label class="guest-checkbox">
+        <input type="checkbox" v-model="newGuest" />
+        Convidado (jogador de fora)
+      </label>
+      <button type="submit" class="btn-add">{{ newGuest ? 'Adicionar convidado' : 'Adicionar' }}</button>
+    </form>
+
+    <div class="players-section" v-if="players.length">
+      <div class="players-header">
+        <h2>Confirmados hoje: {{ confirmedPlayers.length }} <span class="muted">/ {{ activePlayers.length }} ativos<span v-if="confirmedGuests.length"> &middot; {{ confirmedGuests.length }} conv.</span></span></h2>
+        <div class="players-header-actions">
+          <button type="button" class="btn-mini" @click="confirmAll">Confirmar todos</button>
+          <button type="button" class="btn-mini" @click="newDay">Novo dia</button>
+        </div>
+      </div>
+      <ul class="player-list">
+        <template v-for="(p, i) in players" :key="i">
+          <li class="player-item" :class="{ disabled: !p.active, 'is-confirmed': p.confirmed && p.active }">
+            <span
+              class="confirm-check"
+              :class="{ on: p.confirmed && p.active, off: !p.active }"
+              @click="toggleConfirm(i)"
+              :title="!p.active ? 'Lesionado' : (p.confirmed ? 'Confirmado hoje (clique para desmarcar)' : 'Confirmar presenca')"
+            >{{ p.confirmed && p.active ? '✓' : '' }}</span>
+            <span class="name">{{ p.name }}</span>
+            <span v-if="p.guest" class="guest-tag">Convidado</span>
+            <span v-if="!p.active" class="injured-tag">Lesionado</span>
+            <div class="actions">
+              <button
+                class="btn-toggle"
+                :class="{ off: !p.active }"
+                @click="toggleActive(i)"
+                :title="p.active ? 'Desativar (lesionado)' : 'Ativar'"
+              >{{ p.active ? '✓' : '✗' }}</button>
+              <button class="btn-edit" @click="toggleEdit(i)" :title="editingIndex === i ? 'Fechar' : 'Editar notas'">&#9998;</button>
+              <button class="btn-remove" @click="removePlayer(i)">&times;</button>
+            </div>
+          </li>
+          <li v-if="editingIndex === i" style="list-style:none;">
+            <div class="edit-panel">
+              <div class="edit-title">Editando notas de {{ p.name }}</div>
+              <div class="edit-ratings-grid">
+                <div class="edit-rating-row" v-for="cat in categories" :key="cat.key">
+                  <span class="label">{{ cat.label }}</span>
+                  <div class="rating-stars">
+                    <span
+                      v-for="n in 5"
+                      :key="n"
+                      class="star"
+                      :class="{ active: n <= editRatings[cat.key] }"
+                      @click="editRatings[cat.key] = n"
+                    >&#9733;</span>
+                  </div>
+                </div>
+              </div>
+              <button class="btn-save-rating" @click="saveRatings(i)">Salvar</button>
+            </div>
+          </li>
+        </template>
+      </ul>
+    </div>
+
+    <p v-if="!players.length" class="empty-msg">Nenhum jogador adicionado ainda.</p>
+
+    <div class="blocks-section" v-if="baseCandidates.length >= 2">
+      <h2>Bloqueios (nao podem jogar juntos)</h2>
+      <div class="block-form">
+        <select v-model="blockPlayer1">
+          <option value="">Jogador 1</option>
+          <option v-for="p in baseCandidates" :key="p.name" :value="p.name">{{ p.name }}</option>
+        </select>
+        <span class="block-separator">X</span>
+        <select v-model="blockPlayer2">
+          <option value="">Jogador 2</option>
+          <option v-for="p in availableBlockPlayers" :key="p.name" :value="p.name">{{ p.name }}</option>
+        </select>
+        <button class="btn-block" @click="addBlock" :disabled="!blockPlayer1 || !blockPlayer2">Bloquear</button>
+      </div>
+      <ul class="block-list" v-if="blocks.length">
+        <li class="block-item" v-for="(b, i) in blocks" :key="i">
+          <span><span class="block-names">{{ b[0] }}</span><span class="block-vs"> X </span><span class="block-names">{{ b[1] }}</span></span>
+          <button class="btn-remove" @click="removeBlock(i)">&times;</button>
+        </li>
+      </ul>
+    </div>
+
+    <p v-if="players.length && baseCandidates.length < 2" class="empty-msg">
+      Confirme pelo menos 2 jogadores da base (convidados nao entram no sorteio) para sortear.
+    </p>
+    <button v-if="baseCandidates.length >= 2" class="btn-sort" :class="{ 'btn-sort-alert': mustResort }" @click="sortTeams">
+      {{ mustResort ? '🔁 Sortear novamente (obrigatorio)' : (teamPreto.length ? 'Sortear Times de novo' : 'Sortear Times') }}
+      ({{ baseCandidates.length }}<span v-if="confirmedGuests.length"> + {{ confirmedGuests.length }} conv.</span>)
+    </button>
+
+    <div class="teams" v-if="teamPreto.length">
+      <div class="team team-preto">
+        <h2>Time Preto</h2>
+        <ul>
+          <li
+            v-for="(p, i) in teamPreto"
+            :key="p.name"
+            :class="{ 'selected-swap': swapFrom && swapFrom.team === 'preto' && swapFrom.index === i }"
+            @click="selectSwap('preto', i)"
+          ><span>{{ p.name }}<span v-if="p.guest" class="team-guest">conv.</span></span></li>
+        </ul>
+      </div>
+      <div class="team team-vermelho">
+        <h2>Time Vermelho</h2>
+        <ul>
+          <li
+            v-for="(p, i) in teamVermelho"
+            :key="p.name"
+            :class="{ 'selected-swap': swapFrom && swapFrom.team === 'vermelho' && swapFrom.index === i }"
+            @click="selectSwap('vermelho', i)"
+          ><span>{{ p.name }}<span v-if="p.guest" class="team-guest">conv.</span></span></li>
+        </ul>
+      </div>
+    </div>
+    <div class="swap-hint" v-if="teamPreto.length && !swapFrom">
+      Clique em um jogador para trocar de time
+    </div>
+    <div class="swap-hint" v-if="swapFrom">
+      Agora clique em um jogador do outro time para trocar, ou clique no mesmo para cancelar
+    </div>
+    <button v-if="drawModified" class="btn-save-draw" @click="saveModifiedDraw">Salvar alteracoes no sorteio</button>
+
+    <div class="result-panel" v-if="teamPreto.length">
+      <div class="result-title">Placar da partida</div>
+
+      <div v-if="mustResort" class="resort-warning">
+        🔁 Um time venceu 2 vezes nesta rodada! Sorteie os times-base novamente para liberar a proxima partida.
+        <button class="btn-resort" @click="sortTeams">Sortear novamente</button>
+      </div>
+
+      <template v-else>
+        <div class="score-row">
+          <span class="score-team preto">Preto</span>
+          <input type="number" min="0" class="score-input" v-model.number="scorePreto" placeholder="0" />
+          <span class="score-x">x</span>
+          <input type="number" min="0" class="score-input" v-model.number="scoreVermelho" placeholder="0" />
+          <span class="score-team vermelho">Vermelho</span>
+        </div>
+        <button class="btn-register" @click="registerMatch">Registrar partida</button>
+      </template>
+
+      <div class="session-record">
+        Vitorias nesta rodada &mdash;
+        <span class="rec-preto">Preto {{ sessionRecord.preto }}</span> x
+        <span class="rec-vermelho">{{ sessionRecord.vermelho }} Vermelho</span>
+        <span v-if="sessionRecord.empate" class="rec-empate"> ({{ sessionRecord.empate }} empate(s))</span>
+      </div>
+    </div>
+
+    <div class="history-section" v-if="matches.length">
+      <h2>Historico de Partidas</h2>
+      <div class="match-item" v-for="(m, i) in matches" :key="i">
+        <div class="match-top">
+          <span class="match-date">{{ m.date }}</span>
+          <button class="btn-remove" @click="removeMatch(i)">&times;</button>
+        </div>
+        <div class="match-score">
+          <span class="team-label preto" :class="{ winner: m.winner === 'preto' }">Preto</span>
+          <span class="score-num">{{ m.scorePreto }} <span class="score-x">x</span> {{ m.scoreVermelho }}</span>
+          <span class="team-label vermelho" :class="{ winner: m.winner === 'vermelho' }">Vermelho</span>
+        </div>
+        <div class="match-teams">
+          <div><strong>Preto:</strong> {{ m.preto.join(', ') }}</div>
+          <div><strong>Vermelho:</strong> {{ m.vermelho.join(', ') }}</div>
+        </div>
+      </div>
+      <button class="btn-clear-history" @click="clearMatches">Limpar historico de partidas</button>
+    </div>
+
+    <div class="history-section" v-if="history.length">
+      <h2>Historico de Sorteios</h2>
+      <div class="history-item" v-for="(h, i) in history" :key="i">
+        <div class="history-date">{{ h.date }}</div>
+        <div class="history-teams">
+          <div>
+            <h3 style="color:#ccc">Time Preto</h3>
+            <ul><li v-for="p in h.preto" :key="p">{{ p }}</li></ul>
+          </div>
+          <div>
+            <h3 style="color:#e94560">Time Vermelho</h3>
+            <ul><li v-for="p in h.vermelho" :key="p">{{ p }}</li></ul>
+          </div>
+        </div>
+      </div>
+      <button class="btn-clear-history" @click="clearHistory">Limpar historico</button>
+    </div>
+  </div>
+
+  <script>
+    const { createApp, ref, reactive, watch } = Vue;
+
+    const CATEGORIES = [
+      { key: 'geral', label: 'Geral' },
+      { key: 'fisico', label: 'Cond. Fisico' },
+      { key: 'finalizacao', label: 'Finalizacao' },
+      { key: 'visao', label: 'Visao de Jogo' },
+      { key: 'fominha', label: 'Fominha' },
+    ];
+
+    function defaultRatings() {
+      return { geral: 3, fisico: 3, finalizacao: 3, visao: 3, fominha: 3 };
+    }
+
+    function avgRating(r) {
+      return (r.geral + r.fisico + r.finalizacao + r.visao + r.fominha) / 5;
+    }
+
+    // How many players stayed on the "same" side vs the previous base draw
+    // (label-independent: takes the best of the two alignments). Lower = more change.
+    function overlapCount(a, b, prevA, prevB) {
+      if (!prevA.length && !prevB.length) return 0;
+      const pA = new Set(prevA), pB = new Set(prevB);
+      const countIn = (set, arr) => arr.reduce((n, p) => n + (set.has(p.name) ? 1 : 0), 0);
+      const o1 = countIn(pA, a) + countIn(pB, b);
+      const o2 = countIn(pB, a) + countIn(pA, b);
+      return Math.max(o1, o2);
+    }
+
+    // Migrate old players that only have a single "rating" field
+    function migratePlayer(p) {
+      if (p.ratings) {
+        if (p.active === undefined) p.active = true;
+        if (p.confirmed === undefined) p.confirmed = false;
+        if (p.guest === undefined) p.guest = false;
+        return p;
+      }
+      const old = p.rating || 3;
+      return {
+        name: p.name,
+        active: true,
+        confirmed: false,
+        guest: false,
+        ratings: { geral: old, fisico: 3, finalizacao: 3, visao: 3, fominha: 3 }
+      };
+    }
+
+    createApp({
+      setup() {
+        const raw = JSON.parse(localStorage.getItem('sorteio_players') || '[]');
+        const players = ref(raw.map(migratePlayer));
+        const newName = ref('');
+        const newGuest = ref(false);
+        const newRatings = reactive(defaultRatings());
+        const teamPreto = ref([]);
+        const teamVermelho = ref([]);
+        const editingIndex = ref(-1);
+        const editRatings = reactive(defaultRatings());
+        const history = ref(JSON.parse(localStorage.getItem('sorteio_history') || '[]'));
+        const matches = ref(JSON.parse(localStorage.getItem('sorteio_matches') || '[]'));
+        const scorePreto = ref(null);
+        const scoreVermelho = ref(null);
+        const swapFrom = ref(null);
+        const drawModified = ref(false);
+        const blocks = ref(JSON.parse(localStorage.getItem('sorteio_blocks') || '[]'));
+        const blockPlayer1 = ref('');
+        const blockPlayer2 = ref('');
+
+        // Restore last draw
+        const lastDraw = JSON.parse(localStorage.getItem('sorteio_last_draw') || 'null');
+        const currentDrawId = ref(lastDraw && lastDraw.id ? lastDraw.id : null);
+        if (lastDraw) {
+          teamPreto.value = lastDraw.preto;
+          teamVermelho.value = lastDraw.vermelho;
+        }
+
+        // Win tally for the current teams (matches recorded since the last sort)
+        const sessionRecord = Vue.computed(() => {
+          const rec = { preto: 0, vermelho: 0, empate: 0 };
+          if (!currentDrawId.value) return rec;
+          for (const m of matches.value) {
+            if (m.drawId === currentDrawId.value && rec[m.winner] !== undefined) rec[m.winner]++;
+          }
+          return rec;
+        });
+
+        // A team reached 2 wins in this round -> a new base draw is mandatory
+        const mustResort = Vue.computed(() =>
+          !!currentDrawId.value && (sessionRecord.value.preto >= 2 || sessionRecord.value.vermelho >= 2)
+        );
+
+        const activePlayers = Vue.computed(() => players.value.filter(p => p.active));
+        // Draw pool for today: on the roster AND confirmed present
+        const confirmedPlayers = Vue.computed(() => players.value.filter(p => p.active && p.confirmed));
+        // Base pool = confirmed regulars only (guests are NOT drawn into the base teams)
+        const baseCandidates = Vue.computed(() => players.value.filter(p => p.active && p.confirmed && !p.guest));
+        const confirmedGuests = Vue.computed(() => players.value.filter(p => p.active && p.confirmed && p.guest));
+
+        const availableBlockPlayers = Vue.computed(() => {
+          return baseCandidates.value.filter(p => p.name !== blockPlayer1.value);
+        });
+
+        watch(players, (val) => {
+          localStorage.setItem('sorteio_players', JSON.stringify(val));
+        }, { deep: true });
+
+        watch(blocks, (val) => {
+          localStorage.setItem('sorteio_blocks', JSON.stringify(val));
+        }, { deep: true });
+
+        watch(history, (val) => {
+          localStorage.setItem('sorteio_history', JSON.stringify(val));
+        }, { deep: true });
+
+        watch(matches, (val) => {
+          localStorage.setItem('sorteio_matches', JSON.stringify(val));
+        }, { deep: true });
+
+        function addPlayer() {
+          if (!newName.value) return;
+          players.value.push({
+            name: newName.value,
+            active: true,
+            confirmed: newGuest.value,   // guests are added because they're playing today
+            guest: newGuest.value,
+            ratings: { ...newRatings }
+          });
+          newName.value = '';
+          newGuest.value = false;
+          Object.assign(newRatings, defaultRatings());
+        }
+
+        function toggleConfirm(index) {
+          const p = players.value[index];
+          if (!p.active) return; // injured players can't be confirmed
+          p.confirmed = !p.confirmed;
+        }
+
+        function confirmAll() {
+          players.value.forEach(p => { if (p.active) p.confirmed = true; });
+        }
+
+        function newDay() {
+          if (!confirm('Iniciar um novo dia? Isso vai desmarcar a presenca de todos os jogadores (convidados sao mantidos na lista).')) return;
+          players.value.forEach(p => p.confirmed = false);
+        }
+
+        function removePlayer(index) {
+          if (editingIndex.value === index) editingIndex.value = -1;
+          else if (editingIndex.value > index) editingIndex.value--;
+          players.value.splice(index, 1);
+        }
+
+        function toggleActive(index) {
+          players.value[index].active = !players.value[index].active;
+        }
+
+        function toggleEdit(index) {
+          if (editingIndex.value === index) {
+            editingIndex.value = -1;
+            return;
+          }
+          editingIndex.value = index;
+          const r = players.value[index].ratings;
+          Object.assign(editRatings, { ...r });
+        }
+
+        function saveRatings(index) {
+          players.value[index].ratings = { ...editRatings };
+          editingIndex.value = -1;
+        }
+
+        function addBlock() {
+          if (!blockPlayer1.value || !blockPlayer2.value) return;
+          const exists = blocks.value.some(b =>
+            (b[0] === blockPlayer1.value && b[1] === blockPlayer2.value) ||
+            (b[0] === blockPlayer2.value && b[1] === blockPlayer1.value)
+          );
+          if (exists) return;
+          blocks.value.push([blockPlayer1.value, blockPlayer2.value]);
+          blockPlayer1.value = '';
+          blockPlayer2.value = '';
+        }
+
+        function removeBlock(index) {
+          blocks.value.splice(index, 1);
+        }
+
+        function checkBlocks(teamA, teamB) {
+          for (const [p1, p2] of blocks.value) {
+            const p1inA = teamA.some(p => p.name === p1);
+            const p2inA = teamA.some(p => p.name === p2);
+            if (p1inA && p2inA) return false;
+            const p1inB = teamB.some(p => p.name === p1);
+            const p2inB = teamB.some(p => p.name === p2);
+            if (p1inB && p2inB) return false;
+          }
+          return true;
+        }
+
+        function teamScore(team) {
+          return team.reduce((sum, p) => sum + avgRating(p.ratings), 0);
+        }
+
+        function sortTeams() {
+          // Previous base grouping (regulars only) so we can maximize the change
+          const prevA = teamPreto.value.filter(p => !p.guest).map(p => p.name);
+          const prevB = teamVermelho.value.filter(p => !p.guest).map(p => p.name);
+
+          // Base pool = confirmed regulars only. Guests are distributed later.
+          const all = baseCandidates.value.map(p => ({ name: p.name, ratings: { ...p.ratings }, guest: false }));
+          all.sort((a, b) => avgRating(b.ratings) - avgRating(a.ratings));
+
+          let bestA = null, bestB = null, bestCost = Infinity;
+
+          for (let attempt = 0; attempt < 300; attempt++) {
+            const a = [];
+            const b = [];
+            const shuffled = [...all];
+
+            if (attempt > 0) {
+              // Shuffle players with similar avg to explore different arrangements
+              for (let i = shuffled.length - 1; i > 0; i--) {
+                const j = Math.floor(Math.random() * (i + 1));
+                if (Math.abs(avgRating(shuffled[i].ratings) - avgRating(shuffled[j].ratings)) <= 0.5) {
+                  [shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]];
+                }
+              }
+            }
+
+            // Snake draft for balance
+            shuffled.forEach((p, i) => {
+              const round = Math.floor(i / 2);
+              const pick = i % 2;
+              if (round % 2 === 0) {
+                pick === 0 ? a.push(p) : b.push(p);
+              } else {
+                pick === 0 ? b.push(p) : a.push(p);
+              }
+            });
+
+            if (!checkBlocks(a, b)) continue;
+
+            const diff = Math.abs(teamScore(a) - teamScore(b));
+            // Balance first; among balanced options, prefer maximum change vs the last draw.
+            const overlap = overlapCount(a, b, prevA, prevB);
+            const changeRatio = all.length ? overlap / all.length : 0; // 1 = unchanged, 0 = fully changed
+            const cost = diff + 0.25 * changeRatio;
+            if (cost < bestCost) {
+              bestCost = cost;
+              bestA = [...a];
+              bestB = [...b];
+            }
+          }
+
+          // Fallback if no valid arrangement found
+          if (!bestA) {
+            const a = [];
+            const b = [];
+            all.forEach((p, i) => {
+              const round = Math.floor(i / 2);
+              const pick = i % 2;
+              if (round % 2 === 0) {
+                pick === 0 ? a.push(p) : b.push(p);
+              } else {
+                pick === 0 ? b.push(p) : a.push(p);
+              }
+            });
+
+            for (const [p1, p2] of blocks.value) {
+              const p1inA = a.findIndex(p => p.name === p1);
+              const p2inA = a.findIndex(p => p.name === p2);
+              if (p1inA !== -1 && p2inA !== -1) {
+                const swapIdx = b.findIndex(bp => !blocks.value.some(bl =>
+                  (bl[0] === bp.name && bl[1] === p1) || (bl[1] === bp.name && bl[0] === p1)
+                ));
+                if (swapIdx !== -1) [a[p2inA], b[swapIdx]] = [b[swapIdx], a[p2inA]];
+              }
+              const p1inB = b.findIndex(p => p.name === p1);
+              const p2inB = b.findIndex(p => p.name === p2);
+              if (p1inB !== -1 && p2inB !== -1) {
+                const swapIdx = a.findIndex(ap => !blocks.value.some(bl =>
+                  (bl[0] === ap.name && bl[1] === p1) || (bl[1] === ap.name && bl[0] === p1)
+                ));
+                if (swapIdx !== -1) [b[p2inB], a[swapIdx]] = [a[swapIdx], b[p2inB]];
+              }
+            }
+            bestA = a;
+            bestB = b;
+          }
+
+          // Auto-distribute confirmed guests to keep the teams balanced (size, then score)
+          const guests = confirmedGuests.value
+            .map(p => ({ name: p.name, ratings: { ...p.ratings }, guest: true }))
+            .sort((a, b) => avgRating(b.ratings) - avgRating(a.ratings));
+          const teamA = [...bestA], teamB = [...bestB];
+          let scoreA = teamScore(teamA), scoreB = teamScore(teamB);
+          for (const g of guests) {
+            let toA;
+            if (teamA.length !== teamB.length) toA = teamA.length < teamB.length;
+            else toA = scoreA <= scoreB;
+            if (toA) { teamA.push(g); scoreA += avgRating(g.ratings); }
+            else { teamB.push(g); scoreB += avgRating(g.ratings); }
+          }
+
+          if (Math.random() < 0.5) {
+            teamPreto.value = teamA;
+            teamVermelho.value = teamB;
+          } else {
+            teamPreto.value = teamB;
+            teamVermelho.value = teamA;
+          }
+
+          swapFrom.value = null;
+          drawModified.value = false;
+          scorePreto.value = null;
+          scoreVermelho.value = null;
+          currentDrawId.value = Date.now();
+
+          const draw = { id: currentDrawId.value, preto: teamPreto.value, vermelho: teamVermelho.value };
+          localStorage.setItem('sorteio_last_draw', JSON.stringify(draw));
+
+          const now = new Date();
+          const dateStr = now.toLocaleDateString('pt-BR') + ' ' + now.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
+          history.value.unshift({
+            date: dateStr,
+            preto: teamPreto.value.map(p => p.name),
+            vermelho: teamVermelho.value.map(p => p.name)
+          });
+        }
+
+        function selectSwap(team, index) {
+          if (!swapFrom.value) {
+            swapFrom.value = { team, index };
+            return;
+          }
+          if (swapFrom.value.team === team && swapFrom.value.index === index) {
+            swapFrom.value = null;
+            return;
+          }
+          if (swapFrom.value.team === team) {
+            swapFrom.value = { team, index };
+            return;
+          }
+
+          const fromTeam = swapFrom.value.team === 'preto' ? teamPreto : teamVermelho;
+          const toTeam = team === 'preto' ? teamPreto : teamVermelho;
+          const fromIdx = swapFrom.value.index;
+          const temp = fromTeam.value[fromIdx];
+          fromTeam.value[fromIdx] = toTeam.value[index];
+          toTeam.value[index] = temp;
+
+          teamPreto.value = [...teamPreto.value];
+          teamVermelho.value = [...teamVermelho.value];
+
+          swapFrom.value = null;
+          drawModified.value = true;
+        }
+
+        function saveModifiedDraw() {
+          const draw = { id: currentDrawId.value, preto: teamPreto.value, vermelho: teamVermelho.value };
+          localStorage.setItem('sorteio_last_draw', JSON.stringify(draw));
+          if (history.value.length) {
+            history.value[0].preto = teamPreto.value.map(p => p.name);
+            history.value[0].vermelho = teamVermelho.value.map(p => p.name);
+          }
+          drawModified.value = false;
+        }
+
+        function registerMatch() {
+          if (!teamPreto.value.length || !teamVermelho.value.length) return;
+          if (mustResort.value) {
+            alert('Um time ja venceu 2 vezes. Sorteie os times novamente antes de registrar a proxima partida.');
+            return;
+          }
+          const sp = Number(scorePreto.value);
+          const sv = Number(scoreVermelho.value);
+          if (!Number.isFinite(sp) || !Number.isFinite(sv) || sp < 0 || sv < 0) {
+            alert('Informe o placar dos dois times.');
+            return;
+          }
+          const now = new Date();
+          const dateStr = now.toLocaleDateString('pt-BR') + ' ' + now.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
+          matches.value.unshift({
+            drawId: currentDrawId.value,
+            date: dateStr,
+            preto: teamPreto.value.map(p => p.name),
+            vermelho: teamVermelho.value.map(p => p.name),
+            scorePreto: sp,
+            scoreVermelho: sv,
+            winner: sp > sv ? 'preto' : (sv > sp ? 'vermelho' : 'empate')
+          });
+          scorePreto.value = null;
+          scoreVermelho.value = null;
+        }
+
+        function removeMatch(index) {
+          matches.value.splice(index, 1);
+        }
+
+        function clearMatches() {
+          matches.value = [];
+          localStorage.removeItem('sorteio_matches');
+        }
+
+        function clearHistory() {
+          history.value = [];
+          localStorage.removeItem('sorteio_history');
+        }
+
+        function exportData() {
+          const data = {
+            app: 'sorteio-de-times',
+            version: 1,
+            exportedAt: new Date().toISOString(),
+            players: players.value,
+            blocks: blocks.value,
+            history: history.value,
+            matches: matches.value,
+            lastDraw: { id: currentDrawId.value, preto: teamPreto.value, vermelho: teamVermelho.value }
+          };
+          const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+          const url = URL.createObjectURL(blob);
+          const a = document.createElement('a');
+          const stamp = new Date().toISOString().slice(0, 10);
+          a.href = url;
+          a.download = `sorteio-backup-${stamp}.json`;
+          a.click();
+          URL.revokeObjectURL(url);
+        }
+
+        function importData(event) {
+          const file = event.target.files[0];
+          if (!file) return;
+          const reader = new FileReader();
+          reader.onload = (e) => {
+            try {
+              const data = JSON.parse(e.target.result);
+              if (!data || !Array.isArray(data.players)) {
+                alert('Arquivo invalido: nao contem jogadores.');
+                return;
+              }
+              if (!confirm('Isso vai substituir TODOS os dados atuais (jogadores, bloqueios e historico). Continuar?')) return;
+
+              players.value = data.players.map(migratePlayer);
+              blocks.value = Array.isArray(data.blocks) ? data.blocks : [];
+              history.value = Array.isArray(data.history) ? data.history : [];
+              matches.value = Array.isArray(data.matches) ? data.matches : [];
+
+              if (data.lastDraw && Array.isArray(data.lastDraw.preto)) {
+                teamPreto.value = data.lastDraw.preto;
+                teamVermelho.value = Array.isArray(data.lastDraw.vermelho) ? data.lastDraw.vermelho : [];
+                currentDrawId.value = data.lastDraw.id || null;
+                localStorage.setItem('sorteio_last_draw', JSON.stringify({
+                  id: currentDrawId.value, preto: teamPreto.value, vermelho: teamVermelho.value
+                }));
+              } else {
+                teamPreto.value = [];
+                teamVermelho.value = [];
+                currentDrawId.value = null;
+                localStorage.removeItem('sorteio_last_draw');
+              }
+
+              swapFrom.value = null;
+              drawModified.value = false;
+              editingIndex.value = -1;
+              alert('Dados importados com sucesso!');
+            } catch (err) {
+              alert('Erro ao ler o arquivo: ' + err.message);
+            }
+          };
+          reader.readAsText(file);
+          event.target.value = '';
+        }
+
+        return {
+          players, newName, newRatings, teamPreto, teamVermelho,
+          editingIndex, editRatings, history, swapFrom, drawModified,
+          blocks, blockPlayer1, blockPlayer2, availableBlockPlayers, activePlayers,
+          newGuest, confirmedPlayers, baseCandidates, confirmedGuests,
+          matches, scorePreto, scoreVermelho, sessionRecord, mustResort,
+          categories: CATEGORIES,
+          addPlayer, removePlayer, toggleActive, toggleEdit, saveRatings, sortTeams,
+          toggleConfirm, confirmAll, newDay,
+          addBlock, removeBlock, selectSwap, saveModifiedDraw, clearHistory,
+          registerMatch, removeMatch, clearMatches,
+          exportData, importData
+        };
+      }
+    }).mount('#app');
+  </script>
+</body>
+</html>
