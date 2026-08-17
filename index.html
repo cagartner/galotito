@@ -40,862 +40,545 @@
     window.dispatchEvent(new Event("galosync-ready"));
   </script>
   <style>
+    :root {
+      --bg: #08080a;
+      --app: #0b0b0d;
+      --card: #141417;
+      --card2: #1c1c21;
+      --line: #26262c;
+      --line2: #4a4a52;
+      --red: #f0272e;
+      --red-soft: rgba(240,39,46,0.14);
+      --red-soft-b: #f0272e;
+      --red-text: #ffc9cc;
+      --gold: #f0b050;
+      --green: #3fa84a;
+      --green-soft: rgba(63,168,74,0.16);
+      --green-text: #bfe6c3;
+      --info: #6fb7e8;
+      --t1: #f5f5f5;
+      --t2: #e8e8ea;
+      --t3: #b9b9be;
+      --t4: #85858c;
+      --t5: #5a5a61;
+      --off: #3a3a40;
+      --disp: 'Bebas Neue', sans-serif;
+      --sans: 'DM Sans', system-ui, sans-serif;
+    }
     * { box-sizing: border-box; margin: 0; padding: 0; }
+    html, body { height: 100%; }
     body {
-      font-family: 'Segoe UI', sans-serif;
-      background: #1a1a2e;
-      color: #eee;
-      min-height: 100vh;
-      padding: 20px;
+      font-family: var(--sans);
+      background: var(--bg);
+      color: var(--t1);
+      -webkit-font-smoothing: antialiased;
     }
-    h1 { text-align: center; margin-bottom: 24px; font-size: 1.8rem; }
-    .container { max-width: 800px; margin: 0 auto; }
+    button { font-family: inherit; cursor: pointer; border: none; }
+    input, select { font-family: inherit; }
+    ::-webkit-scrollbar { width: 8px; height: 8px; }
+    ::-webkit-scrollbar-thumb { background: #2a2a30; border-radius: 8px; }
 
-    /* Day switcher (patota) */
-    .day-switcher {
+    /* App shell */
+    .container {
+      max-width: 460px;
+      height: 100dvh;
+      margin: 0 auto;
+      background: var(--app);
       display: flex;
-      gap: 6px;
-      background: #16213e;
-      border-radius: 10px;
-      padding: 5px;
-      margin-bottom: 16px;
+      flex-direction: column;
+      overflow: hidden;
+      position: relative;
     }
-    .day-switcher button {
-      flex: 1;
-      background: transparent;
-      color: #aaa;
-      border-radius: 7px;
-      padding: 10px;
-      font-size: 1rem;
-      font-weight: 700;
+    .app-header { flex: none; padding: 14px 18px 10px; display: flex; flex-direction: column; gap: 12px; border-bottom: 1px solid var(--line); }
+    .brand { display: flex; align-items: center; gap: 10px; }
+    .brand img { width: 30px; height: auto; display: block; }
+    .brand-name { font-family: var(--disp); font-size: 18px; letter-spacing: 0.08em; color: var(--t3); flex: 1; }
+    .lock-btn {
+      background: var(--card2); color: var(--t3); border: 1px solid var(--line);
+      border-radius: 999px; padding: 6px 12px; font-size: 12px; font-weight: 700;
+      display: inline-flex; align-items: center; gap: 6px;
     }
-    .day-switcher button.active {
-      background: #e94560;
-      color: #fff;
-    }
+    .lock-btn.editing { color: var(--green); border-color: rgba(63,168,74,0.5); }
+    .lock-dot { width: 7px; height: 7px; border-radius: 50%; background: var(--gold); }
+    .lock-btn.editing .lock-dot { background: var(--green); }
 
-    /* Cloud sync bar */
-    .sync-bar {
-      display: flex;
-      align-items: center;
-      gap: 10px;
-      background: #16213e;
-      border-radius: 10px;
-      padding: 9px 12px;
-      margin-bottom: 16px;
-      font-size: 0.85rem;
-      color: #ccc;
+    .day-pills { display: flex; gap: 4px; background: var(--card2); border-radius: 999px; padding: 4px; }
+    .day-pills button {
+      flex: 1; background: transparent; color: var(--t4); border-radius: 999px;
+      padding: 10px; font-size: 14px; font-weight: 700;
     }
-    .sync-dot { width: 9px; height: 9px; border-radius: 50%; background: #4caf50; flex-shrink: 0; }
-    .sync-dot.off { background: #f5c518; }
-    .sync-label { flex: 1; }
-    .btn-unlock { background: #0f3460; color: #fff; font-size: 0.8rem; padding: 7px 12px; }
-    .locked { opacity: 0.9; pointer-events: none; }
+    .day-pills button.on { background: var(--red); color: #fff; }
 
-    /* Data toolbar */
-    .data-toolbar {
-      display: flex;
-      gap: 8px;
-      justify-content: center;
-      margin-bottom: 20px;
-      flex-wrap: wrap;
-    }
-    .btn-data {
-      background: #16213e;
-      color: #aaa;
-      border: 1px solid #0f3460;
-      font-size: 0.85rem;
-      padding: 8px 14px;
-      border-radius: 8px;
-      cursor: pointer;
-      display: inline-flex;
-      align-items: center;
-      font-weight: 600;
-      transition: opacity 0.2s;
-    }
-    .btn-data:hover { opacity: 0.85; }
+    /* Main scroll area */
+    .app-main { flex: 1; overflow-y: auto; padding: 14px 18px 20px; display: flex; flex-direction: column; gap: 14px; }
+    .app-main.locked { opacity: 0.94; }
+    .app-main.locked .lockable { pointer-events: none; }
 
-    /* Form */
-    .add-player {
-      background: #16213e;
-      border-radius: 12px;
-      padding: 16px;
-      margin-bottom: 24px;
+    /* Bottom nav */
+    .app-nav { flex: none; display: flex; background: #101013; border-top: 1px solid var(--line); }
+    .app-nav button {
+      flex: 1; background: transparent; padding: 11px 2px 16px; text-align: center;
+      border-top: 2px solid transparent; font-size: 11px; color: var(--t4); font-weight: 500; letter-spacing: 0.04em;
+      display: flex; flex-direction: column; align-items: center; gap: 3px;
     }
-    .add-player input {
-      width: 100%;
-      padding: 10px 14px;
-      border: none;
-      border-radius: 8px;
-      font-size: 1rem;
-      background: #1a1a2e;
-      color: #eee;
-      outline: none;
-      margin-bottom: 12px;
-    }
-    .add-player input:focus { box-shadow: 0 0 0 2px #e94560; }
-    .ratings-grid {
-      display: grid;
-      grid-template-columns: 1fr 1fr;
-      gap: 8px 16px;
-      margin-bottom: 12px;
-    }
-    .rating-row {
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      gap: 6px;
-    }
-    .rating-row .label { font-size: 0.8rem; color: #aaa; white-space: nowrap; min-width: 90px; }
-    .rating-stars { display: flex; gap: 2px; }
-    .star {
-      cursor: pointer;
-      font-size: 1.2rem;
-      color: #444;
-      transition: color 0.15s;
-    }
-    .star.active { color: #f5c518; }
-    .star:hover { color: #f5c518; }
-    button {
-      padding: 10px 20px;
-      border: none;
-      border-radius: 8px;
-      font-size: 1rem;
-      cursor: pointer;
-      font-weight: 600;
-      transition: opacity 0.2s;
-    }
-    button:hover { opacity: 0.85; }
-    .btn-add { background: #e94560; color: #fff; width: 100%; }
-    .btn-sort { background: #0f3460; color: #fff; width: 100%; padding: 14px; font-size: 1.1rem; margin-bottom: 24px; }
-    .btn-sort-alert { background: #e94560; animation: pulse 1.2s infinite; }
-    @keyframes pulse { 0%,100% { opacity: 1; } 50% { opacity: 0.7; } }
-    .section-block { margin-bottom: 24px; }
-    .section-title { font-size: 1.15rem; color: #eee; margin-bottom: 12px; }
-    .section-title .muted-small { font-size: 0.8rem; color: #777; font-weight: 400; }
-    .hint-small { font-size: 0.8rem; color: #888; margin-top: 8px; text-align: center; }
-    .btn-gen { background: #0f3460; color: #fff; width: 100%; padding: 14px; font-size: 1.05rem; margin-bottom: 16px; }
-    .btn-gen:disabled { opacity: 0.4; cursor: not-allowed; }
-    .team li.not-confirmed { opacity: 0.4; }
-    .absent-tag {
-      font-size: 0.65rem;
-      color: #e94560;
-      border: 1px solid #e94560;
-      border-radius: 5px;
-      padding: 0 5px;
-      margin-left: 8px;
-      vertical-align: middle;
-    }
+    .app-nav button .ico { font-size: 17px; line-height: 1; }
+    .app-nav button.on { color: var(--red); font-weight: 700; border-top-color: var(--red); background: var(--card); }
 
-    /* Guest checkbox in add form */
-    .guest-checkbox {
-      display: flex;
-      align-items: center;
-      gap: 8px;
-      font-size: 0.9rem;
-      color: #aaa;
-      margin-bottom: 12px;
-      cursor: pointer;
-    }
-    .guest-checkbox input { width: 16px; height: 16px; accent-color: #e94560; cursor: pointer; }
+    /* Common */
+    .screen-title { display: flex; align-items: flex-end; justify-content: space-between; gap: 12px; }
+    .screen-title h1 { font-family: var(--disp); font-size: 30px; line-height: 1; letter-spacing: 0.02em; font-weight: 400; }
+    .screen-sub { font-size: 12px; color: var(--t4); }
+    .card { background: var(--card); border-radius: 16px; padding: 16px; }
+    .muted { color: var(--t4); }
+    .label-cap { font-size: 12px; color: var(--t4); letter-spacing: 0.06em; }
+    .empty { text-align: center; color: var(--t5); padding: 24px 10px; font-size: 14px; }
 
-    /* Player list */
-    .players-section h2 { margin-bottom: 12px; font-size: 1.1rem; color: #aaa; }
-    .players-header {
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      gap: 8px;
-      margin-bottom: 12px;
-      flex-wrap: wrap;
-    }
-    .players-header h2 { margin-bottom: 0; }
-    .players-header .muted { color: #666; font-weight: 400; font-size: 0.9rem; }
-    .players-header-actions { display: flex; gap: 6px; }
-    .btn-mini {
-      background: #0f3460;
-      color: #fff;
-      font-size: 0.75rem;
-      padding: 6px 10px;
-    }
-    .btn-mini-danger { background: transparent; border: 1px solid #e94560; color: #e94560; }
+    .btn-primary { background: var(--red); color: #fff; border-radius: 12px; padding: 15px; font-size: 15px; font-weight: 700; width: 100%; }
+    .btn-primary:disabled { opacity: 0.4; }
+    .btn-ghost { background: var(--card2); color: var(--t1); border: 1px solid rgba(255,255,255,0.09); border-radius: 12px; padding: 13px; font-size: 14px; font-weight: 500; }
+    .btn-ghost.sm { padding: 10px 14px; font-size: 13px; }
+    .btn-danger { background: transparent; color: var(--red); border: 1px solid var(--red); border-radius: 12px; padding: 12px; font-size: 13px; font-weight: 600; }
+    .btn-pulse { animation: pulseAlert 1.4s infinite; }
+    @keyframes pulseAlert { 0%,100% { opacity: 1; } 50% { opacity: 0.62; } }
 
-    /* Standings table */
-    .standings-section { margin-bottom: 24px; }
-    .standings-section h2 { margin-bottom: 12px; font-size: 1.1rem; color: #aaa; }
-    .standings-wrap { overflow-x: auto; background: #16213e; border-radius: 8px; padding: 4px; }
-    table.standings { width: 100%; border-collapse: collapse; font-size: 0.9rem; }
-    table.standings th, table.standings td { padding: 8px 6px; text-align: center; white-space: nowrap; }
-    table.standings th { color: #888; font-weight: 600; font-size: 0.8rem; border-bottom: 1px solid rgba(255,255,255,0.1); }
-    table.standings td { border-bottom: 1px solid rgba(255,255,255,0.05); }
-    table.standings tr:last-child td { border-bottom: none; }
-    table.standings .left { text-align: left; }
-    table.standings .pos { color: #666; }
-    table.standings .v { color: #4caf50; font-weight: 600; }
-    table.standings .d { color: #e94560; }
-    table.standings .pts { color: #f5c518; font-weight: 700; }
-    table.standings tbody tr:first-child .pos { color: #f5c518; font-weight: 700; }
+    /* Alert (2 vitorias) */
+    .alert-box { background: var(--red-soft); border: 1px solid var(--red-soft-b); border-radius: 12px; padding: 14px 16px; display: flex; flex-direction: column; gap: 12px; }
+    .alert-box .txt { font-size: 14px; color: var(--red-text); line-height: 1.45; }
 
-    .btn-restore-base {
-      background: transparent;
-      border: 1px solid #0f3460;
-      color: #8ab4f8;
-      font-size: 0.8rem;
-      padding: 6px 12px;
-      margin-top: 10px;
-      width: 100%;
-    }
-    .confirm-check {
-      width: 22px;
-      height: 22px;
-      border-radius: 6px;
-      border: 2px solid #555;
-      display: inline-flex;
-      align-items: center;
-      justify-content: center;
-      font-size: 0.9rem;
-      color: #fff;
-      cursor: pointer;
-      flex-shrink: 0;
-      margin-right: 10px;
-      transition: background 0.15s, border-color 0.15s;
-    }
-    .confirm-check.on { background: #2e7d32; border-color: #2e7d32; }
-    .confirm-check.off { cursor: not-allowed; opacity: 0.4; }
-    .player-item.is-confirmed { border-left: 3px solid #2e7d32; }
-    .guest-tag {
-      font-size: 0.7rem;
-      color: #f5c518;
-      border: 1px solid #f5c518;
-      border-radius: 6px;
-      padding: 1px 6px;
-      margin: 0 8px;
-      white-space: nowrap;
-    }
-    .player-list { list-style: none; margin-bottom: 24px; }
-    .player-item {
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      padding: 10px 14px;
-      background: #16213e;
-      border-radius: 8px;
-      margin-bottom: 6px;
-    }
-    .player-item .name { flex: 1; }
-    .player-item.disabled .name { color: #777; text-decoration: line-through; }
-    .player-item.disabled { opacity: 0.7; }
-    .injured-tag {
-      font-size: 0.7rem;
-      color: #e94560;
-      border: 1px solid #e94560;
-      border-radius: 6px;
-      padding: 1px 6px;
-      margin: 0 8px;
-      white-space: nowrap;
-    }
-    .player-item .actions { display: flex; align-items: center; gap: 4px; }
-    .btn-toggle {
-      background: transparent;
-      color: #4caf50;
-      font-size: 1rem;
-      padding: 4px 8px;
-    }
-    .btn-toggle.off { color: #888; }
-    .btn-edit {
-      background: transparent;
-      color: #f5c518;
-      font-size: 1rem;
-      padding: 4px 8px;
-    }
-    .btn-remove {
-      background: transparent;
-      color: #e94560;
-      font-size: 1.2rem;
-      padding: 4px 8px;
-    }
+    /* Confirm summary card (Hoje) */
+    .conf-card { display: flex; align-items: center; gap: 16px; }
+    .conf-num { display: flex; flex-direction: column; align-items: center; gap: 2px; min-width: 74px; }
+    .conf-num .n { font-family: var(--disp); font-size: 44px; line-height: 1; color: var(--green); }
+    .conf-num .l { font-size: 11px; color: var(--t4); letter-spacing: 0.06em; }
+    .conf-right { flex: 1; display: flex; flex-direction: column; gap: 8px; }
+    .bar { height: 8px; border-radius: 999px; background: var(--line); overflow: hidden; }
+    .bar > i { display: block; height: 8px; background: var(--green); border-radius: 999px; }
+    .conf-break { font-size: 13px; color: var(--t3); }
+    .conf-actions { display: flex; gap: 8px; }
+    .conf-actions button { flex: 1; }
 
-    /* Edit ratings panel */
-    .edit-panel {
-      background: #0f1a30;
-      border-radius: 8px;
-      padding: 12px 14px;
-      margin-bottom: 6px;
-    }
-    .edit-panel .edit-title {
-      font-size: 0.85rem;
-      color: #f5c518;
-      margin-bottom: 8px;
-    }
-    .edit-ratings-grid {
-      display: grid;
-      grid-template-columns: 1fr 1fr;
-      gap: 6px 16px;
-      margin-bottom: 10px;
-    }
-    .edit-rating-row {
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      gap: 6px;
-    }
-    .edit-rating-row .label { font-size: 0.75rem; color: #aaa; min-width: 90px; }
-    .edit-rating-row .rating-stars .star { font-size: 1rem; }
-    .btn-save-rating {
-      background: #0f3460;
-      color: #fff;
-      font-size: 0.8rem;
-      padding: 6px 16px;
-      width: 100%;
-    }
+    .row-between { display: flex; align-items: center; justify-content: space-between; gap: 10px; }
+    .link-red { font-size: 13px; color: var(--red); font-weight: 500; background: none; }
+
+    /* Presence / player rows */
+    .prow { display: flex; align-items: center; gap: 12px; background: var(--card2); border-radius: 10px; padding: 9px 14px; min-height: 52px; border-left: 3px solid transparent; }
+    .prow.on { border-left-color: var(--green); }
+    .prow.injured { opacity: 0.5; }
+    .pcheck { width: 30px; height: 30px; border-radius: 8px; display: inline-flex; align-items: center; justify-content: center; font-size: 16px; font-weight: 700; color: #fff; flex-shrink: 0; border: 2px solid var(--line2); background: transparent; }
+    .pcheck.on { background: var(--green); border-color: var(--green); }
+    .pname { flex: 1; font-size: 16px; font-weight: 500; color: var(--t3); }
+    .prow.on .pname { color: var(--t1); }
+    .prow.injured .pname { text-decoration: line-through; color: var(--t4); }
+    .pavg { font-family: var(--disp); font-size: 18px; letter-spacing: 0.02em; min-width: 26px; text-align: right; color: var(--t5); }
+    .prow.on .pavg { color: var(--gold); }
+    .tag { font-size: 11px; border-radius: 6px; padding: 2px 7px; white-space: nowrap; border: 1px solid currentColor; }
+    .tag.conv { color: var(--gold); }
+    .tag.extra { color: var(--info); }
+    .tag.injured { color: var(--t4); }
+    .tag.falta { color: var(--red); }
+
+    /* Sub tabs */
+    .subtabs { display: flex; gap: 4px; background: var(--card); border-radius: 999px; padding: 4px; }
+    .subtabs button { flex: 1; background: transparent; color: var(--t4); border-radius: 999px; padding: 9px; font-size: 13px; font-weight: 700; }
+    .subtabs button.on { background: var(--line); color: var(--t1); }
+
+    /* Info banners */
+    .banner-green { background: var(--green-soft); border: 1px solid var(--green); border-radius: 12px; padding: 12px 14px; font-size: 13px; color: var(--green-text); line-height: 1.4; }
+    .note-box { background: var(--card); border-radius: 14px; padding: 14px 16px; display: flex; flex-direction: column; gap: 8px; }
+    .note-box .ico-badge { width: 30px; height: 30px; border-radius: 8px; background: var(--line); color: var(--gold); display: inline-flex; align-items: center; justify-content: center; font-size: 15px; flex-shrink: 0; }
+    .note-row { display: flex; align-items: center; gap: 12px; }
+    .note-row .txt { flex: 1; font-size: 13px; color: var(--t3); line-height: 1.4; }
 
     /* Teams */
-    .teams { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-bottom: 24px; }
-    .team {
-      border-radius: 12px;
-      padding: 16px;
-      min-height: 120px;
-    }
-    .team-preto { background: #111; border: 2px solid #444; }
-    .team-vermelho { background: #3a0a0a; border: 2px solid #e94560; }
-    .team h2 {
-      text-align: center;
-      margin-bottom: 12px;
-      font-size: 1.2rem;
-    }
-    .team-preto h2 { color: #ccc; }
-    .team-vermelho h2 { color: #e94560; }
-    .team ul { list-style: none; }
-    .team li {
-      padding: 6px 8px;
-      border-bottom: 1px solid rgba(255,255,255,0.1);
-      cursor: pointer;
-      border-radius: 4px;
-      transition: background 0.15s;
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-    }
-    .team li:hover { background: rgba(255,255,255,0.05); }
-    .team li:last-child { border-bottom: none; }
-    .team-guest {
-      font-size: 0.65rem;
-      color: #f5c518;
-      border: 1px solid #f5c518;
-      border-radius: 5px;
-      padding: 0 5px;
-      margin-left: 8px;
-      vertical-align: middle;
-    }
-    .team-extra {
-      font-size: 0.65rem;
-      color: #4fc3f7;
-      border: 1px solid #4fc3f7;
-      border-radius: 5px;
-      padding: 0 5px;
-      margin-left: 8px;
-      vertical-align: middle;
-    }
-    .team li.selected-swap {
-      background: rgba(233, 69, 96, 0.3);
-      outline: 2px solid #e94560;
-    }
-    .swap-hint {
-      text-align: center;
-      font-size: 0.8rem;
-      color: #f5c518;
-      margin-top: 8px;
-      padding: 6px;
-      background: rgba(245, 197, 24, 0.1);
-      border-radius: 6px;
-    }
-    .btn-save-draw {
-      background: #0f3460;
-      color: #fff;
-      width: 100%;
-      padding: 10px;
-      font-size: 0.95rem;
-      margin-bottom: 16px;
-    }
+    .teams-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+    .teamcard { border-radius: 14px; padding: 14px; display: flex; flex-direction: column; gap: 10px; }
+    .teamcard.preto { background: #101013; border: 1px solid var(--line2); }
+    .teamcard.vermelho { background: #2a0708; border: 1px solid var(--red); }
+    .teamcard .thead { display: flex; align-items: baseline; justify-content: space-between; }
+    .teamcard .tname { font-family: var(--disp); font-size: 22px; letter-spacing: 0.02em; }
+    .teamcard.vermelho .tname { color: var(--red); }
+    .teamcard .tavg { font-family: var(--disp); font-size: 16px; color: var(--gold); }
+    .teamcard ul { list-style: none; display: flex; flex-direction: column; gap: 2px; }
+    .teamcard li { display: flex; align-items: center; gap: 6px; font-size: 14px; color: var(--t2); padding: 7px 0; border-bottom: 1px solid rgba(255,255,255,0.06); cursor: pointer; }
+    .teamcard li:last-child { border-bottom: none; }
+    .teamcard li .nm { flex: 1; }
+    .teamcard li.sel { background: rgba(240,39,46,0.18); border-radius: 6px; padding-left: 6px; padding-right: 6px; }
+    .teamcard li.faint { opacity: 0.45; }
+    .tag-xs { font-size: 10px; border-radius: 5px; padding: 1px 5px; border: 1px solid currentColor; }
+    .tag-xs.conv { color: var(--gold); }
+    .tag-xs.extra { color: var(--info); }
+    .tag-xs.falta { color: var(--red); }
 
-    .empty-msg { text-align: center; color: #555; padding: 20px; }
+    /* Placar */
+    .score-panel { display: flex; flex-direction: column; gap: 16px; }
+    .score-cols { display: flex; align-items: flex-start; justify-content: center; gap: 14px; }
+    .score-col { flex: 1; display: flex; flex-direction: column; align-items: center; gap: 10px; }
+    .score-team { font-family: var(--disp); font-size: 16px; letter-spacing: 0.06em; color: var(--t3); }
+    .score-col.v .score-team { color: var(--red); }
+    .score-big { font-family: var(--disp); font-size: 56px; line-height: 0.9; }
+    .score-btns { display: flex; gap: 8px; width: 100%; }
+    .score-btns button { flex: 1; background: var(--card2); color: var(--t1); border: 1px solid rgba(255,255,255,0.09); border-radius: 10px; min-height: 48px; font-size: 22px; }
+    .score-x { font-family: var(--disp); font-size: 28px; color: var(--t5); padding-top: 26px; }
+    .round-line { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+    .round-line .v { font-family: var(--disp); font-size: 22px; letter-spacing: 0.02em; }
+    .match-item2 { background: var(--card); border-radius: 12px; padding: 12px 14px; display: flex; flex-direction: column; gap: 6px; }
+    .match-item2 .top { display: flex; align-items: center; gap: 10px; }
+    .match-item2 .tm { font-family: var(--disp); font-size: 15px; letter-spacing: 0.04em; flex: 1; color: var(--t4); }
+    .match-item2 .tm.r { text-align: right; }
+    .match-item2 .sc { font-family: var(--disp); font-size: 24px; letter-spacing: 0.02em; }
+    .match-item2 .bot { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+    .match-item2 .dt { font-size: 12px; color: var(--t5); }
+    .del-x { background: none; color: var(--red); font-size: 18px; padding: 0 4px; line-height: 1; }
 
-    /* Result / score entry */
-    .result-panel {
-      background: #16213e;
-      border-radius: 12px;
-      padding: 16px;
-      margin-bottom: 24px;
-    }
-    .result-title { font-size: 1rem; color: #aaa; margin-bottom: 12px; text-align: center; }
-    .score-row {
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      gap: 10px;
-      margin-bottom: 14px;
-      flex-wrap: wrap;
-    }
-    .score-team { font-weight: 700; font-size: 0.95rem; }
-    .score-team.preto { color: #ccc; }
-    .score-team.vermelho { color: #e94560; }
-    .score-input {
-      width: 56px;
-      padding: 10px;
-      border: none;
-      border-radius: 8px;
-      font-size: 1.2rem;
-      text-align: center;
-      background: #1a1a2e;
-      color: #eee;
-      outline: none;
-    }
-    .score-input:focus { box-shadow: 0 0 0 2px #e94560; }
-    .score-x { color: #666; font-weight: 700; }
-    .btn-register { background: #0f3460; color: #fff; width: 100%; padding: 12px; }
-    .resort-warning {
-      background: rgba(233, 69, 96, 0.15);
-      border: 1px solid #e94560;
-      color: #ffb3c0;
-      border-radius: 8px;
-      padding: 14px;
-      text-align: center;
-      font-size: 0.9rem;
-      margin-bottom: 4px;
-    }
-    .btn-resort {
-      background: #e94560;
-      color: #fff;
-      width: 100%;
-      padding: 12px;
-      margin-top: 12px;
-      font-size: 1rem;
-    }
-    .session-record {
-      text-align: center;
-      font-size: 0.9rem;
-      color: #ccc;
-      margin-top: 12px;
-      padding-top: 12px;
-      border-top: 1px solid rgba(255,255,255,0.1);
-    }
-    .session-record .rec-preto { color: #ccc; font-weight: 700; }
-    .session-record .rec-vermelho { color: #e94560; font-weight: 700; }
-    .session-record .rec-empate { color: #888; }
+    /* Ranking table */
+    .rank { background: var(--card); border-radius: 18px; overflow: hidden; }
+    .rank .rhead, .rank .rrow { display: grid; grid-template-columns: 26px 1fr 30px 30px 30px 42px; gap: 4px; padding: 11px 14px; align-items: center; }
+    .rank .rhead { font-size: 11px; color: var(--t4); letter-spacing: 0.06em; border-bottom: 1px solid rgba(255,255,255,0.09); }
+    .rank .rrow { font-size: 14px; border-bottom: 1px solid rgba(255,255,255,0.05); }
+    .rank .rrow:last-child { border-bottom: none; }
+    .rank .pos { font-family: var(--disp); font-size: 18px; color: var(--t5); }
+    .rank .rrow:first-child .pos { color: var(--gold); }
+    .rank .nm { font-weight: 500; display: flex; align-items: center; gap: 6px; }
+    .rank .c { text-align: center; color: var(--t3); }
+    .rank .v { text-align: center; color: var(--green); font-weight: 700; }
+    .rank .d { text-align: center; color: var(--t4); }
+    .rank .pts { text-align: right; font-family: var(--disp); font-size: 18px; color: var(--t2); }
+    .rank .rrow:first-child .pts { color: var(--gold); }
+    .summary-card { background: var(--card); border-radius: 14px; padding: 14px 16px; display: flex; flex-direction: column; gap: 8px; }
+    .summary-card .sr { display: flex; align-items: center; justify-content: space-between; font-size: 14px; color: var(--t3); }
 
-    /* Match history */
-    .match-item {
-      background: #16213e;
-      border-radius: 8px;
-      padding: 14px;
-      margin-bottom: 10px;
-    }
-    .match-top {
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      margin-bottom: 8px;
-    }
-    .match-date { font-size: 0.8rem; color: #666; }
-    .match-score {
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      gap: 14px;
-      margin-bottom: 10px;
-    }
-    .match-score .team-label { font-size: 0.9rem; color: #888; font-weight: 600; }
-    .match-score .team-label.winner { text-decoration: none; }
-    .match-score .team-label.preto.winner { color: #fff; }
-    .match-score .team-label.vermelho.winner { color: #e94560; }
-    .match-score .team-label.winner::after { content: ' 🏆'; }
-    .match-score .score-num { font-size: 1.4rem; font-weight: 700; color: #eee; }
-    .match-teams { font-size: 0.8rem; color: #999; }
-    .match-teams strong { color: #bbb; }
+    /* Elenco */
+    .search-row { display: flex; gap: 8px; }
+    .search-row input { flex: 1; background: var(--card2); border-radius: 12px; padding: 13px 14px; font-size: 14px; color: var(--t1); border: none; outline: none; }
+    .search-row input::placeholder { color: var(--t5); }
+    .search-row .add-btn { flex: none; background: var(--red); color: #fff; border-radius: 12px; padding: 0 18px; font-size: 22px; font-weight: 700; }
+    .erow { display: flex; align-items: center; gap: 12px; background: var(--card2); border-radius: 10px; padding: 10px 14px; min-height: 52px; cursor: pointer; }
+    .erow .pname { color: var(--t1); }
+    .stars { font-size: 15px; letter-spacing: 2px; white-space: nowrap; }
+    .stars .on { color: var(--gold); }
+    .stars .off { color: var(--off); }
+    .erow .pavg { color: var(--gold); }
+    .row-actions { display: flex; gap: 6px; }
+    .ricon { background: none; font-size: 15px; padding: 4px 6px; line-height: 1; }
+    .ricon.edit { color: var(--gold); }
+    .ricon.injury { color: var(--green); }
+    .ricon.injury.off { color: var(--t4); }
+    .ricon.del { color: var(--red); }
 
-    /* History */
-    .history-section { margin-top: 16px; }
-    .history-section h2 { margin-bottom: 12px; font-size: 1.1rem; color: #aaa; }
-    .history-item {
-      background: #16213e;
-      border-radius: 8px;
-      padding: 14px;
-      margin-bottom: 10px;
-    }
-    .history-item .history-date {
-      font-size: 0.8rem;
-      color: #666;
-      margin-bottom: 8px;
-    }
-    .history-teams {
-      display: grid;
-      grid-template-columns: 1fr 1fr;
-      gap: 10px;
-    }
-    .history-teams h3 {
-      font-size: 0.9rem;
-      margin-bottom: 4px;
-    }
-    .history-teams ul { list-style: none; font-size: 0.85rem; color: #ccc; }
-    .history-teams li { padding: 2px 0; }
-    .btn-clear-history {
-      background: transparent;
-      color: #e94560;
-      font-size: 0.85rem;
-      padding: 6px 12px;
-      border: 1px solid #e94560;
-      margin-top: 8px;
-    }
+    /* Add / edit forms */
+    .form-card { background: var(--card); border-radius: 16px; padding: 16px; display: flex; flex-direction: column; gap: 12px; }
+    .form-card input[type=text] { background: var(--card2); border-radius: 10px; padding: 12px 14px; font-size: 15px; color: var(--t1); border: none; outline: none; width: 100%; }
+    .rate-grid { display: grid; grid-template-columns: 1fr; gap: 8px; }
+    .rate-row { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+    .rate-row .rl { font-size: 13px; color: var(--t3); }
+    .rate-stars { font-size: 22px; letter-spacing: 4px; white-space: nowrap; cursor: pointer; }
+    .rate-stars .on { color: var(--gold); }
+    .rate-stars .off { color: var(--off); }
+    .guest-check { display: flex; align-items: center; gap: 8px; font-size: 13px; color: var(--t3); }
+    .guest-check input { width: 16px; height: 16px; accent-color: var(--red); }
 
     /* Blocks */
-    .blocks-section { margin-bottom: 24px; }
-    .blocks-section h2 { margin-bottom: 12px; font-size: 1.1rem; color: #aaa; }
-    .block-form {
-      display: flex;
-      gap: 8px;
-      align-items: center;
-      margin-bottom: 12px;
-      flex-wrap: wrap;
-    }
-    .block-form select {
-      flex: 1;
-      min-width: 120px;
-      padding: 8px 10px;
-      border: none;
-      border-radius: 8px;
-      font-size: 0.9rem;
-      background: #16213e;
-      color: #eee;
-      outline: none;
-    }
-    .block-form select:focus { box-shadow: 0 0 0 2px #e94560; }
-    .block-form .block-separator { color: #666; font-size: 0.85rem; }
-    .btn-block { background: #e94560; color: #fff; font-size: 0.85rem; padding: 8px 14px; }
-    .block-list { list-style: none; }
-    .block-item {
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      padding: 8px 14px;
-      background: #16213e;
-      border-radius: 8px;
-      margin-bottom: 6px;
-      font-size: 0.9rem;
-    }
-    .block-item .block-names { color: #ccc; }
-    .block-item .block-vs { color: #e94560; margin: 0 6px; }
+    .block-form { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
+    .block-form select { flex: 1; min-width: 110px; background: var(--card2); border-radius: 10px; padding: 10px; font-size: 13px; color: var(--t1); border: none; }
+    .block-item { display: flex; align-items: center; justify-content: space-between; background: var(--card2); border-radius: 10px; padding: 8px 14px; font-size: 13px; color: var(--t3); }
+    .cp-select { width: 100%; background: var(--card2); border: none; border-radius: 10px; padding: 11px 12px; color: var(--t1); font-size: 14px; outline: none; }
 
-    @media (max-width: 500px) {
-      .teams, .history-teams { grid-template-columns: 1fr; }
-      .ratings-grid, .edit-ratings-grid { grid-template-columns: 1fr; }
+    /* History */
+    .hist-item { background: var(--card); border-radius: 12px; padding: 12px 14px; display: flex; flex-direction: column; gap: 8px; }
+    .hist-teams { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; font-size: 12px; }
+    .hist-teams h4 { font-family: var(--disp); font-size: 14px; letter-spacing: 0.02em; font-weight: 400; margin-bottom: 3px; }
+    .hist-teams ul { list-style: none; color: var(--t3); }
+    .hist-teams li { padding: 1px 0; }
+    .btn-restore { background: var(--card2); border: 1px solid var(--line2); color: var(--info); border-radius: 10px; padding: 9px; font-size: 12px; font-weight: 600; width: 100%; }
+
+    .swap-hint2 { text-align: center; font-size: 12px; color: var(--gold); background: rgba(240,176,80,0.08); border-radius: 8px; padding: 8px; }
+    .toolbar-2 { display: flex; gap: 8px; }
+    .toolbar-2 label, .toolbar-2 button { flex: 1; text-align: center; }
+    .toolbar-2 input[type=file] { display: none; }
+
+    /* 2-col lists helper (used on desktop) */
+    .list { display: flex; flex-direction: column; gap: 6px; }
+
+    /* Desktop: aproveitar a largura */
+    @media (min-width: 760px) {
+      .container { max-width: 760px; }
+      .app-main { padding: 22px 30px 28px; }
+      .app-nav button { padding: 14px 2px 18px; font-size: 12px; }
+      .screen-title h1 { font-size: 36px; }
+      .list { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+      .teams-grid { gap: 16px; }
+      .rank .rhead, .rank .rrow { grid-template-columns: 30px 1fr 40px 40px 40px 52px; }
+    }
+    @media (min-width: 1100px) {
+      .container { max-width: 900px; }
     }
   </style>
 </head>
 <body>
   <div id="app" class="container">
-    <h1>Sorteio de Times</h1>
+    <header class="app-header">
+      <div class="brand">
+        <img src="assets/escudo-galo-tito.png" alt="Escudo Galo Tito">
+        <span class="brand-name">PATOTA GALO TITO</span>
+        <button v-if="cloudEnabled" class="lock-btn" :class="{ editing: canEdit }" @click="canEdit ? lockEdit() : unlockEdit()">
+          <span class="lock-dot"></span>{{ canEdit ? 'Editando' : 'Só leitura' }}
+        </button>
+      </div>
+      <div class="day-pills">
+        <button v-for="d in days" :key="d" :class="{ on: currentDay === d }" @click="switchDay(d)">{{ dayLabels[d] }}</button>
+      </div>
+    </header>
 
-    <div class="day-switcher">
-      <button
-        v-for="d in days"
-        :key="d"
-        type="button"
-        :class="{ active: currentDay === d }"
-        @click="switchDay(d)"
-      >{{ dayLabels[d] }}</button>
-    </div>
+    <main class="app-main" :class="{ locked: cloudEnabled && !canEdit }">
 
-    <div class="sync-bar" v-if="cloudEnabled">
-      <span class="sync-dot" :class="{ off: !canEdit }"></span>
-      <span class="sync-label">{{ canEdit ? 'Edição liberada · sincronizando' : 'Somente leitura' }}</span>
-      <button class="btn-unlock" @click="canEdit ? lockEdit() : unlockEdit()">{{ canEdit ? 'Bloquear' : 'Liberar edição' }}</button>
-    </div>
+      <!-- ===================== HOJE ===================== -->
+      <template v-if="activeTab === 'hoje'">
+        <div class="screen-title"><h1>Hoje</h1><span class="screen-sub">{{ nowLabel }}</span></div>
 
-    <div :class="{ locked: cloudEnabled && !canEdit }">
-    <div class="data-toolbar">
-      <button type="button" class="btn-data" @click="exportData">&#11015; Exportar dados</button>
-      <label class="btn-data">
-        &#11014; Importar dados
-        <input type="file" accept="application/json,.json" @change="importData" hidden />
-      </label>
-    </div>
+        <div v-if="mustResort" class="alert-box lockable">
+          <div class="txt">Um time venceu 2 vezes nesta rodada. Sorteie o time base para liberar a próxima partida.</div>
+          <button class="btn-primary btn-pulse" @click="sortBaseTeams">Sortear time base</button>
+        </div>
 
-    <form class="add-player" @submit.prevent="addPlayer">
-      <input v-model.trim="newName" placeholder="Nome do jogador" />
-      <div class="ratings-grid">
-        <div class="rating-row" v-for="cat in categories" :key="cat.key">
-          <span class="label">{{ cat.label }}</span>
-          <div class="rating-stars">
-            <span
-              v-for="n in 5"
-              :key="n"
-              class="star"
-              :class="{ active: n <= newRatings[cat.key] }"
-              @click="newRatings[cat.key] = n"
-            >&#9733;</span>
+        <div class="card conf-card">
+          <div class="conf-num"><span class="n">{{ confirmedPlayers.length }}</span><span class="l">CONFIRMADOS</span></div>
+          <div class="conf-right">
+            <div class="bar"><i :style="{ width: confPct + '%' }"></i></div>
+            <div class="conf-break">{{ confBase }} da base · {{ confGuests }} conv. · {{ faltam }} faltam</div>
+            <div class="conf-actions lockable">
+              <button class="btn-ghost sm" @click="goAddGuest">+ Convidado</button>
+              <button class="btn-ghost sm" @click="newDay">Novo dia</button>
+            </div>
           </div>
         </div>
-      </div>
-      <label class="guest-checkbox">
-        <input type="checkbox" v-model="newGuest" />
-        Convidado (jogador de fora)
-      </label>
-      <button type="submit" class="btn-add">{{ newGuest ? 'Adicionar convidado' : 'Adicionar' }}</button>
-    </form>
 
-    <div class="players-section" v-if="players.length">
-      <div class="players-header">
-        <h2>Confirmados hoje: {{ confirmedPlayers.length }} <span class="muted">/ {{ activePlayers.length }} ativos<span v-if="confirmedGuests.length"> &middot; {{ confirmedGuests.length }} conv.</span></span></h2>
-        <div class="players-header-actions">
-          <button type="button" class="btn-mini" @click="confirmAll">Confirmar todos</button>
-          <button type="button" class="btn-mini" @click="newDay">Novo dia</button>
-          <button type="button" class="btn-mini btn-mini-danger" v-if="confirmedGuests.length || players.some(p => p.guest)" @click="clearGuests">Limpar convidados</button>
+        <div class="row-between">
+          <span class="label-cap">PRESENÇA</span>
+          <button class="link-red lockable" @click="confirmAll">Confirmar todos</button>
         </div>
-      </div>
-      <ul class="player-list">
-        <template v-for="(p, i) in players" :key="i">
-          <li class="player-item" :class="{ disabled: !p.active, 'is-confirmed': p.confirmed && p.active }">
-            <span
-              class="confirm-check"
-              :class="{ on: p.confirmed && p.active, off: !p.active }"
-              @click="toggleConfirm(i)"
-              :title="!p.active ? 'Lesionado' : (p.confirmed ? 'Confirmado hoje (clique para desmarcar)' : 'Confirmar presenca')"
-            >{{ p.confirmed && p.active ? '✓' : '' }}</span>
-            <span class="name">{{ p.name }}</span>
-            <span v-if="p.guest" class="guest-tag">Convidado</span>
-            <span v-if="!p.active" class="injured-tag">Lesionado</span>
-            <div class="actions">
-              <button
-                class="btn-toggle"
-                :class="{ off: !p.active }"
-                @click="toggleActive(i)"
-                :title="p.active ? 'Desativar (lesionado)' : 'Ativar'"
-              >{{ p.active ? '✓' : '✗' }}</button>
-              <button class="btn-edit" @click="toggleEdit(i)" :title="editingIndex === i ? 'Fechar' : 'Editar notas'">&#9998;</button>
-              <button class="btn-remove" @click="removePlayer(i)">&times;</button>
+
+        <div class="list lockable" v-if="players.length">
+          <div v-for="(p, i) in players" :key="i" class="prow" :class="{ on: p.confirmed && p.active, injured: !p.active }" @click="toggleConfirm(i)">
+            <span class="pcheck" :class="{ on: p.confirmed && p.active }">{{ p.confirmed && p.active ? '✓' : '' }}</span>
+            <span class="pname">{{ p.name }}</span>
+            <span v-if="p.guest" class="tag conv">conv.</span>
+            <span v-else-if="p.active && p.base !== 'preto' && p.base !== 'vermelho'" class="tag extra">extra</span>
+            <span v-if="!p.active" class="tag injured">lesionado</span>
+            <span class="pavg">{{ fmtAvg(p.ratings) }}</span>
+          </div>
+        </div>
+        <p v-else class="empty">Nenhum jogador. Cadastre no Elenco.</p>
+      </template>
+
+      <!-- ===================== TIMES ===================== -->
+      <template v-if="activeTab === 'times'">
+        <div class="screen-title"><h1>Times</h1></div>
+        <div class="subtabs">
+          <button :class="{ on: timesTab === 'partida' }" @click="timesTab = 'partida'">Da partida</button>
+          <button :class="{ on: timesTab === 'base' }" @click="timesTab = 'base'">Base da rodada</button>
+        </div>
+
+        <template v-if="timesTab === 'base'">
+          <button class="btn-primary lockable" :class="{ 'btn-pulse': mustResort }" @click="sortBaseTeams" :disabled="baseRegulars.length < 2">
+            {{ baseSorted ? 'Sortear time base de novo' : 'Sortear time base' }} ({{ baseRegulars.length }})
+          </button>
+          <div v-if="baseSorted" class="teams-grid">
+            <div class="teamcard preto">
+              <div class="thead"><span class="tname">Base Preto</span><span class="tavg">{{ teamAvg(baseTeamPreto) }}</span></div>
+              <ul><li v-for="p in baseTeamPreto" :key="p.name" :class="{ faint: !p.confirmed }"><span class="nm">{{ p.name }}</span><span v-if="!p.confirmed" class="tag-xs falta">falta</span></li></ul>
             </div>
-          </li>
-          <li v-if="editingIndex === i" style="list-style:none;">
-            <div class="edit-panel">
-              <div class="edit-title">Editando notas de {{ p.name }}</div>
-              <div class="edit-ratings-grid">
-                <div class="edit-rating-row" v-for="cat in categories" :key="cat.key">
-                  <span class="label">{{ cat.label }}</span>
-                  <div class="rating-stars">
-                    <span
-                      v-for="n in 5"
-                      :key="n"
-                      class="star"
-                      :class="{ active: n <= editRatings[cat.key] }"
-                      @click="editRatings[cat.key] = n"
-                    >&#9733;</span>
-                  </div>
-                </div>
-              </div>
-              <button class="btn-save-rating" @click="saveRatings(i)">Salvar</button>
+            <div class="teamcard vermelho">
+              <div class="thead"><span class="tname">Base Vermelho</span><span class="tavg">{{ teamAvg(baseTeamVermelho) }}</span></div>
+              <ul><li v-for="p in baseTeamVermelho" :key="p.name" :class="{ faint: !p.confirmed }"><span class="nm">{{ p.name }}</span><span v-if="!p.confirmed" class="tag-xs falta">falta</span></li></ul>
             </div>
-          </li>
+          </div>
+          <p v-if="baseSorted && unassignedRegulars.length" class="screen-sub">Fora do time base: {{ unassignedRegulars.map(p=>p.name).join(', ') }} — se confirmados, entram como convidados na partida.</p>
         </template>
-      </ul>
-    </div>
-
-    <p v-if="!players.length" class="empty-msg">Nenhum jogador adicionado ainda.</p>
-
-    <div class="blocks-section" v-if="baseRegulars.length >= 2">
-      <h2>Bloqueios (nao podem jogar juntos)</h2>
-      <div class="block-form">
-        <select v-model="blockPlayer1">
-          <option value="">Jogador 1</option>
-          <option v-for="p in baseRegulars" :key="p.name" :value="p.name">{{ p.name }}</option>
-        </select>
-        <span class="block-separator">X</span>
-        <select v-model="blockPlayer2">
-          <option value="">Jogador 2</option>
-          <option v-for="p in availableBlockPlayers" :key="p.name" :value="p.name">{{ p.name }}</option>
-        </select>
-        <button class="btn-block" @click="addBlock" :disabled="!blockPlayer1 || !blockPlayer2">Bloquear</button>
-      </div>
-      <ul class="block-list" v-if="blocks.length">
-        <li class="block-item" v-for="(b, i) in blocks" :key="i">
-          <span><span class="block-names">{{ b[0] }}</span><span class="block-vs"> X </span><span class="block-names">{{ b[1] }}</span></span>
-          <button class="btn-remove" @click="removeBlock(i)">&times;</button>
-        </li>
-      </ul>
-    </div>
-
-    <p v-if="players.length && baseRegulars.length < 2" class="empty-msg">
-      Cadastre/ative pelo menos 2 jogadores regulares para sortear o time base.
-    </p>
-
-    <!-- ETAPA 1: TIME BASE -->
-    <div class="section-block" v-if="baseRegulars.length >= 2">
-      <h2 class="section-title">1. Time Base <span class="muted-small">(dura ate um time vencer 2x)</span></h2>
-      <button class="btn-sort" :class="{ 'btn-sort-alert': mustResort }" @click="sortBaseTeams">
-        {{ mustResort ? '🔁 Sortear time base de novo (obrigatorio)' : (baseSorted ? 'Sortear time base de novo' : 'Sortear time base') }}
-        ({{ baseRegulars.length }} regulares)
-      </button>
-
-      <div class="teams" v-if="baseSorted">
-        <div class="team team-preto">
-          <h2>Base Preto</h2>
-          <ul>
-            <li v-for="p in baseTeamPreto" :key="p.name" :class="{ 'not-confirmed': !p.confirmed }">
-              <span>{{ p.name }}<span v-if="!p.confirmed" class="absent-tag">falta</span></span>
-            </li>
-          </ul>
-        </div>
-        <div class="team team-vermelho">
-          <h2>Base Vermelho</h2>
-          <ul>
-            <li v-for="p in baseTeamVermelho" :key="p.name" :class="{ 'not-confirmed': !p.confirmed }">
-              <span>{{ p.name }}<span v-if="!p.confirmed" class="absent-tag">falta</span></span>
-            </li>
-          </ul>
-        </div>
-      </div>
-      <p v-if="baseSorted && unassignedRegulars.length" class="hint-small">
-        Fora do time base: {{ unassignedRegulars.map(p => p.name).join(', ') }} &mdash; se confirmados, entram na partida como convidados (ou sorteie o time base de novo para incluir na base).
-      </p>
-    </div>
-
-    <!-- ETAPA 2: TIMES DA PARTIDA -->
-    <div class="section-block" v-if="baseSorted">
-      <h2 class="section-title">2. Times da Partida <span class="muted-small">(confirmados + convidados do dia)</span></h2>
-      <button class="btn-gen" @click="generateMatchTeams" :disabled="matchPlayerCount < 2">
-        {{ teamPreto.length ? 'Gerar times da partida de novo' : 'Gerar times da partida' }} ({{ matchPlayerCount }})
-      </button>
-      <p v-if="matchPlayerCount < 2" class="hint-small">Confirme pelo menos 2 jogadores (da base ou convidados) para gerar os times.</p>
-
-      <div class="teams" v-if="teamPreto.length || teamVermelho.length">
-        <div class="team team-preto">
-          <h2>Time Preto</h2>
-          <ul>
-            <li
-              v-for="(p, i) in teamPreto"
-              :key="p.name"
-              :class="{ 'selected-swap': swapFrom && swapFrom.team === 'preto' && swapFrom.index === i }"
-              @click="selectSwap('preto', i)"
-            ><span>{{ p.name }}<span v-if="p.guest" class="team-guest">conv.</span><span v-else-if="p.floater" class="team-extra">extra</span></span></li>
-          </ul>
-        </div>
-        <div class="team team-vermelho">
-          <h2>Time Vermelho</h2>
-          <ul>
-            <li
-              v-for="(p, i) in teamVermelho"
-              :key="p.name"
-              :class="{ 'selected-swap': swapFrom && swapFrom.team === 'vermelho' && swapFrom.index === i }"
-              @click="selectSwap('vermelho', i)"
-            ><span>{{ p.name }}<span v-if="p.guest" class="team-guest">conv.</span><span v-else-if="p.floater" class="team-extra">extra</span></span></li>
-          </ul>
-        </div>
-      </div>
-      <div class="swap-hint" v-if="teamPreto.length && !swapFrom">
-        Clique em um jogador para trocar de time
-      </div>
-      <div class="swap-hint" v-if="swapFrom">
-        Agora clique em um jogador do outro time para trocar, ou clique no mesmo para cancelar
-      </div>
-      <button v-if="drawModified" class="btn-save-draw" @click="saveModifiedDraw">Salvar alteracoes</button>
-
-      <div class="result-panel" v-if="teamPreto.length && teamVermelho.length">
-        <div class="result-title">Placar da partida</div>
-
-        <div v-if="mustResort" class="resort-warning">
-          🔁 Um time venceu 2 vezes nesta rodada! Sorteie o <strong>time base</strong> novamente para liberar a proxima partida.
-          <button class="btn-resort" @click="sortBaseTeams">Sortear time base novamente</button>
-        </div>
 
         <template v-else>
-          <div class="score-row">
-            <span class="score-team preto">Preto</span>
-            <input type="number" min="0" class="score-input" v-model.number="scorePreto" placeholder="0" />
-            <span class="score-x">x</span>
-            <input type="number" min="0" class="score-input" v-model.number="scoreVermelho" placeholder="0" />
-            <span class="score-team vermelho">Vermelho</span>
+          <button class="btn-primary lockable" @click="generateMatchTeams" :disabled="!baseSorted || matchPlayerCount < 2">
+            {{ teamPreto.length ? 'Gerar times de novo' : 'Gerar times da partida' }} ({{ matchPlayerCount }})
+          </button>
+          <p v-if="!baseSorted" class="screen-sub">Sorteie o time base primeiro (aba "Base da rodada").</p>
+          <div v-if="teamPreto.length || teamVermelho.length" class="teams-grid">
+            <div class="teamcard preto">
+              <div class="thead"><span class="tname">Preto</span><span class="tavg">{{ teamAvg(teamPreto) }}</span></div>
+              <ul><li v-for="(p,i) in teamPreto" :key="p.name" :class="{ sel: swapFrom && swapFrom.team==='preto' && swapFrom.index===i }" @click="selectSwap('preto', i)"><span class="nm">{{ p.name }}</span><span v-if="p.guest" class="tag-xs conv">conv.</span><span v-else-if="p.floater" class="tag-xs extra">extra</span></li></ul>
+            </div>
+            <div class="teamcard vermelho">
+              <div class="thead"><span class="tname">Vermelho</span><span class="tavg">{{ teamAvg(teamVermelho) }}</span></div>
+              <ul><li v-for="(p,i) in teamVermelho" :key="p.name" :class="{ sel: swapFrom && swapFrom.team==='vermelho' && swapFrom.index===i }" @click="selectSwap('vermelho', i)"><span class="nm">{{ p.name }}</span><span v-if="p.guest" class="tag-xs conv">conv.</span><span v-else-if="p.floater" class="tag-xs extra">extra</span></li></ul>
+            </div>
           </div>
-          <button class="btn-register" @click="registerMatch">Registrar partida</button>
+          <div v-if="teamPreto.length" class="swap-hint2 lockable">{{ swapFrom ? 'Toque num jogador do outro time para trocar' : 'Toque em dois jogadores para trocar de time' }}</div>
+          <button v-if="drawModified" class="btn-ghost lockable" @click="saveModifiedDraw">Salvar alterações</button>
+        </template>
+      </template>
+
+      <!-- ===================== PLACAR ===================== -->
+      <template v-if="activeTab === 'placar'">
+        <div class="screen-title"><h1>Placar</h1><span class="screen-sub" v-if="teamPreto.length">Patota da {{ dayLabels[currentDay] }}</span></div>
+        <p v-if="!teamPreto.length || !teamVermelho.length" class="empty">Gere os times da partida (aba Times) para registrar o placar.</p>
+        <template v-else>
+          <div class="card score-panel lockable">
+            <div v-if="mustResort" class="alert-box">
+              <div class="txt">Um time venceu 2 vezes. Sorteie o time base para liberar a próxima partida.</div>
+              <button class="btn-primary btn-pulse" @click="sortBaseTeams">Sortear time base</button>
+            </div>
+            <template v-else>
+              <div class="score-cols">
+                <div class="score-col"><span class="score-team">PRETO</span><span class="score-big">{{ Number(scorePreto)||0 }}</span><div class="score-btns"><button @click="decScore('preto')">−</button><button @click="incScore('preto')">+</button></div></div>
+                <span class="score-x">×</span>
+                <div class="score-col v"><span class="score-team">VERMELHO</span><span class="score-big">{{ Number(scoreVermelho)||0 }}</span><div class="score-btns"><button @click="decScore('vermelho')">−</button><button @click="incScore('vermelho')">+</button></div></div>
+              </div>
+              <button class="btn-primary" @click="registerMatch">Registrar partida</button>
+            </template>
+          </div>
+          <div class="card round-line">
+            <span class="muted" style="font-size:13px">Rodada atual</span>
+            <span class="v">{{ sessionRecord.preto }} <span style="color:var(--t5)">×</span> <span style="color:var(--red)">{{ sessionRecord.vermelho }}</span><span v-if="sessionRecord.empate" style="font-size:14px;color:var(--t4)"> · {{ sessionRecord.empate }} emp.</span></span>
+          </div>
         </template>
 
-        <div class="session-record">
-          Vitorias nesta rodada &mdash;
-          <span class="rec-preto">Preto {{ sessionRecord.preto }}</span> x
-          <span class="rec-vermelho">{{ sessionRecord.vermelho }} Vermelho</span>
-          <span v-if="sessionRecord.empate" class="rec-empate"> ({{ sessionRecord.empate }} empate(s))</span>
-        </div>
-      </div>
-    </div>
-
-    <div class="standings-section" v-if="standings.length">
-      <h2>Classificacao</h2>
-      <div class="standings-wrap">
-        <table class="standings">
-          <thead>
-            <tr>
-              <th>#</th><th class="left">Jogador</th>
-              <th title="Jogos">J</th><th title="Vitorias">V</th>
-              <th title="Empates">E</th><th title="Derrotas">D</th>
-              <th title="Pontos">Pts</th><th title="Aproveitamento">%</th>
-            </tr>
-          </thead>
-          <tbody>
-            <tr v-for="(s, i) in standings" :key="s.name">
-              <td class="pos">{{ i + 1 }}</td>
-              <td class="left">{{ s.name }}</td>
-              <td>{{ s.jogos }}</td>
-              <td class="v">{{ s.vitorias }}</td>
-              <td>{{ s.empates }}</td>
-              <td class="d">{{ s.derrotas }}</td>
-              <td class="pts">{{ s.pontos }}</td>
-              <td>{{ s.aprov }}%</td>
-            </tr>
-          </tbody>
-        </table>
-      </div>
-    </div>
-
-    <div class="history-section" v-if="matches.length">
-      <h2>Historico de Partidas</h2>
-      <div class="match-item" v-for="(m, i) in matches" :key="i">
-        <div class="match-top">
-          <span class="match-date">{{ m.date }}</span>
-          <button class="btn-remove" @click="removeMatch(i)">&times;</button>
-        </div>
-        <div class="match-score">
-          <span class="team-label preto" :class="{ winner: m.winner === 'preto' }">Preto</span>
-          <span class="score-num">{{ m.scorePreto }} <span class="score-x">x</span> {{ m.scoreVermelho }}</span>
-          <span class="team-label vermelho" :class="{ winner: m.winner === 'vermelho' }">Vermelho</span>
-        </div>
-        <div class="match-teams">
-          <div><strong>Preto:</strong> {{ m.preto.join(', ') }}</div>
-          <div><strong>Vermelho:</strong> {{ m.vermelho.join(', ') }}</div>
-        </div>
-      </div>
-      <button class="btn-clear-history" @click="clearMatches">Limpar historico de partidas</button>
-    </div>
-
-    <div class="history-section" v-if="history.length">
-      <h2>Historico de Sorteios (Time Base)</h2>
-      <div class="history-item" v-for="(h, i) in history" :key="i">
-        <div class="match-top">
-          <span class="history-date">{{ h.date }}</span>
-          <button class="btn-remove" @click="removeHistory(i)" title="Excluir este sorteio">&times;</button>
-        </div>
-        <div class="history-teams">
-          <div>
-            <h3 style="color:#ccc">Base Preto</h3>
-            <ul><li v-for="p in h.preto" :key="p">{{ p }}</li></ul>
+        <template v-if="matches.length">
+          <span class="label-cap">ÚLTIMAS PARTIDAS</span>
+          <div class="list">
+            <div v-for="(m,i) in matches" :key="i" class="match-item2">
+              <div class="top">
+                <span class="tm" :style="{ color: m.winner==='preto' ? 'var(--t1)' : 'var(--t4)' }">PRETO</span>
+                <span class="sc">{{ m.scorePreto }} × {{ m.scoreVermelho }}</span>
+                <span class="tm r" :style="{ color: m.winner==='vermelho' ? 'var(--red)' : 'var(--t4)' }">VERMELHO</span>
+              </div>
+              <div class="bot">
+                <span class="dt">{{ m.date }}</span>
+                <span style="display:flex;align-items:center;gap:8px">
+                  <span class="tag-xs" :style="{ color: winColor(m.winner) }">{{ winLabel(m.winner) }}</span>
+                  <button class="del-x lockable" @click="removeMatch(i)">×</button>
+                </span>
+              </div>
+            </div>
           </div>
-          <div>
-            <h3 style="color:#e94560">Base Vermelho</h3>
-            <ul><li v-for="p in h.vermelho" :key="p">{{ p }}</li></ul>
+        </template>
+      </template>
+
+      <!-- ===================== RANKING ===================== -->
+      <template v-if="activeTab === 'ranking'">
+        <div class="screen-title"><h1>Ranking</h1><span class="screen-sub">{{ standingsView.length }} jogadores</span></div>
+        <div class="subtabs">
+          <button :class="{ on: rankingScope==='segunda' }" @click="rankingScope='segunda'">Segunda</button>
+          <button :class="{ on: rankingScope==='quarta' }" @click="rankingScope='quarta'">Quarta</button>
+          <button :class="{ on: rankingScope==='somado' }" @click="rankingScope='somado'">Somado</button>
+        </div>
+        <div class="rank" v-if="standingsView.length">
+          <div class="rhead"><span>#</span><span>JOGADOR</span><span class="c">J</span><span class="c">V</span><span class="c">D</span><span style="text-align:right">PTS</span></div>
+          <div class="rrow" v-for="(s,i) in standingsView" :key="s.name">
+            <span class="pos">{{ i+1 }}</span>
+            <span class="nm">{{ s.name }}</span>
+            <span class="c">{{ s.jogos }}</span>
+            <span class="v">{{ s.vitorias }}</span>
+            <span class="d">{{ s.derrotas }}</span>
+            <span class="pts">{{ s.pontos }}</span>
           </div>
         </div>
-        <button class="btn-restore-base" @click="restoreBase(h)">&#8635; Usar esta base</button>
-      </div>
-      <button class="btn-clear-history" @click="clearHistory">Limpar historico</button>
-    </div>
-    </div>
+        <p v-else class="empty">Sem partidas registradas ainda.</p>
+      </template>
+
+      <!-- ===================== ELENCO ===================== -->
+      <template v-if="activeTab === 'elenco'">
+        <div class="screen-title"><h1>Elenco</h1><span class="screen-sub">{{ baseRegulars.length }} reg. · {{ players.filter(p=>p.guest).length }} conv.</span></div>
+        <div class="search-row">
+          <input type="text" v-model="elencoSearch" placeholder="Buscar jogador">
+          <button class="add-btn lockable" @click="showAdd = !showAdd">+</button>
+        </div>
+
+        <div v-if="showAdd" class="form-card lockable">
+          <input type="text" v-model.trim="newName" placeholder="Nome do jogador">
+          <div class="rate-grid">
+            <div class="rate-row" v-for="cat in categories" :key="cat.key">
+              <span class="rl">{{ cat.label }}</span>
+              <span class="rate-stars"><span v-for="n in 5" :key="n" :class="n <= newRatings[cat.key] ? 'on' : 'off'" @click="newRatings[cat.key]=n">★</span></span>
+            </div>
+          </div>
+          <label class="guest-check"><input type="checkbox" v-model="newGuest"> Convidado (jogador de fora)</label>
+          <button class="btn-primary" @click="addPlayer(); showAdd=false">Adicionar</button>
+        </div>
+
+        <div v-if="otherDayPlayers.length" class="note-box lockable">
+          <div class="note-row"><span class="ico-badge">↔</span><span class="txt">Copiar jogador da patota da {{ dayLabels[otherDayName] }} (traz as notas).</span></div>
+          <select class="cp-select" @change="copyPlayer($event.target.value); $event.target.value=''">
+            <option value="">Escolher jogador da {{ dayLabels[otherDayName] }}…</option>
+            <option v-for="p in otherDayPlayers" :key="p.name" :value="p.name">{{ p.name }}</option>
+          </select>
+        </div>
+
+        <div class="list" v-if="filteredElenco.length">
+          <template v-for="p in filteredElenco" :key="p.name">
+            <div class="erow" @click="toggleEdit(realIndex(p))">
+              <span class="pname" :style="!p.active ? 'text-decoration:line-through;color:var(--t4)' : ''">{{ p.name }}</span>
+              <span v-if="p.guest" class="tag conv">conv.</span>
+              <span v-if="!p.active" class="tag injured">lesionado</span>
+              <span class="stars"><span class="on">{{ starsOn(p.ratings) }}</span><span class="off">{{ starsOff(p.ratings) }}</span></span>
+              <span class="pavg">{{ fmtAvg(p.ratings) }}</span>
+              <span class="row-actions lockable" @click.stop>
+                <button class="ricon injury" :class="{ off: !p.active }" @click="toggleActive(realIndex(p))">{{ p.active ? '✓' : '✗' }}</button>
+                <button class="ricon del" @click="removePlayer(realIndex(p))">×</button>
+              </span>
+            </div>
+            <div v-if="editingIndex === realIndex(p)" class="form-card lockable">
+              <div class="label-cap">NOTAS DE {{ p.name.toUpperCase() }}</div>
+              <div class="rate-grid">
+                <div class="rate-row" v-for="cat in categories" :key="cat.key">
+                  <span class="rl">{{ cat.label }}</span>
+                  <span class="rate-stars"><span v-for="n in 5" :key="n" :class="n <= editRatings[cat.key] ? 'on' : 'off'" @click="editRatings[cat.key]=n">★</span></span>
+                </div>
+              </div>
+              <button class="btn-primary" @click="saveRatings(realIndex(p))">Salvar notas</button>
+            </div>
+          </template>
+        </div>
+        <p v-else class="empty">Nenhum jogador encontrado.</p>
+
+        <div class="toolbar-2 lockable">
+          <button class="btn-ghost sm" @click="showBlocks = !showBlocks">Bloqueios ({{ blocks.length }})</button>
+          <button class="btn-ghost sm" @click="exportData">Exportar</button>
+          <label class="btn-ghost sm"><input type="file" accept="application/json,.json" @change="importData">Importar</label>
+        </div>
+
+        <div v-if="showBlocks" class="form-card lockable">
+          <div class="label-cap">BLOQUEIOS (não jogam juntos)</div>
+          <div class="block-form">
+            <select v-model="blockPlayer1"><option value="">Jogador 1</option><option v-for="p in baseRegulars" :key="p.name" :value="p.name">{{ p.name }}</option></select>
+            <span style="color:var(--t5)">×</span>
+            <select v-model="blockPlayer2"><option value="">Jogador 2</option><option v-for="p in availableBlockPlayers" :key="p.name" :value="p.name">{{ p.name }}</option></select>
+            <button class="btn-ghost sm" style="flex:none;padding:10px 14px" @click="addBlock" :disabled="!blockPlayer1 || !blockPlayer2">+</button>
+          </div>
+          <div class="block-item" v-for="(b,i) in blocks" :key="i"><span>{{ b[0] }} × {{ b[1] }}</span><button class="del-x" @click="removeBlock(i)">×</button></div>
+        </div>
+
+        <template v-if="history.length">
+          <span class="label-cap">HISTÓRICO DE SORTEIOS</span>
+          <div class="list">
+            <div class="hist-item" v-for="(h,i) in history" :key="i">
+              <div class="row-between"><span style="font-size:12px;color:var(--t5)">{{ h.date }}</span><button class="del-x lockable" @click="removeHistory(i)">×</button></div>
+              <div class="hist-teams">
+                <div><h4 style="color:var(--t3)">Preto</h4><ul><li v-for="n in h.preto" :key="n">{{ n }}</li></ul></div>
+                <div><h4 style="color:var(--red)">Vermelho</h4><ul><li v-for="n in h.vermelho" :key="n">{{ n }}</li></ul></div>
+              </div>
+              <button class="btn-restore lockable" @click="restoreBase(h)">↻ Usar esta base</button>
+            </div>
+          </div>
+        </template>
+      </template>
+
+    </main>
+
+    <nav class="app-nav">
+      <button :class="{ on: activeTab==='hoje' }" @click="activeTab='hoje'"><span class="ico">📋</span>HOJE</button>
+      <button :class="{ on: activeTab==='times' }" @click="activeTab='times'"><span class="ico">🧩</span>TIMES</button>
+      <button :class="{ on: activeTab==='placar' }" @click="activeTab='placar'"><span class="ico">⚽</span>PLACAR</button>
+      <button :class="{ on: activeTab==='ranking' }" @click="activeTab='ranking'"><span class="ico">🏆</span>RANKING</button>
+      <button :class="{ on: activeTab==='elenco' }" @click="activeTab='elenco'"><span class="ico">👥</span>ELENCO</button>
+    </nav>
   </div>
 
   <script>
@@ -989,6 +672,16 @@
         const blocks = ref(load('blocks', '[]'));
         const blockPlayer1 = ref('');
         const blockPlayer2 = ref('');
+
+        // ---- UI (redesign de 5 abas) ----
+        const activeTab = ref('hoje');
+        const timesTab = ref('partida');
+        const rankingScope = ref(currentDay.value);
+        const elencoSearch = ref('');
+        const showAdd = ref(false);
+        const showBlocks = ref(false);
+        const nowLabel = new Date().toLocaleDateString('pt-BR', { weekday: 'short', day: '2-digit', month: 'short' }) +
+          ' · ' + new Date().toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
 
         // Restore last draw
         const lastDraw = load('last_draw', 'null');
@@ -1558,6 +1251,61 @@
           event.target.value = '';
         }
 
+        // ---- Redesign: computeds e helpers ----
+        function fmtAvg(r) { return avgRating(r).toFixed(1).replace('.', ','); }
+        function teamAvg(team) { return team && team.length ? (teamScore(team) / team.length).toFixed(1).replace('.', ',') : '0,0'; }
+        function starsOn(r) { return '★'.repeat(Math.round(avgRating(r))); }
+        function starsOff(r) { return '★'.repeat(5 - Math.round(avgRating(r))); }
+        function incScore(w) { const rf = w === 'preto' ? scorePreto : scoreVermelho; rf.value = (Number(rf.value) || 0) + 1; }
+        function decScore(w) { const rf = w === 'preto' ? scorePreto : scoreVermelho; rf.value = Math.max(0, (Number(rf.value) || 0) - 1); }
+        function winLabel(w) { return w === 'preto' ? 'Preto' : w === 'vermelho' ? 'Vermelho' : 'empate'; }
+        function winColor(w) { return w === 'vermelho' ? 'var(--red)' : w === 'preto' ? 'var(--t3)' : 'var(--t4)'; }
+        function realIndex(p) { return players.value.findIndex(x => x === p); }
+        function goAddGuest() { activeTab.value = 'elenco'; showAdd.value = true; newGuest.value = true; }
+        function copyPlayer(name) {
+          if (!name || !requireEdit()) return;
+          const src = otherDayPlayers.value.find(p => p.name === name);
+          if (!src) return;
+          players.value.push({ name: src.name, active: true, confirmed: false, guest: false, base: null, ratings: { ...src.ratings } });
+        }
+
+        const confPct = Vue.computed(() => activePlayers.value.length ? Math.round(confirmedPlayers.value.length / activePlayers.value.length * 100) : 0);
+        const confBase = Vue.computed(() => baseRegulars.value.filter(p => p.confirmed).length);
+        const confGuests = Vue.computed(() => confirmedGuests.value.length);
+        const faltam = Vue.computed(() => activePlayers.value.filter(p => !p.confirmed).length);
+        const otherDayName = Vue.computed(() => currentDay.value === 'segunda' ? 'quarta' : 'segunda');
+        const otherDayPlayers = Vue.computed(() => {
+          const raw = JSON.parse(localStorage.getItem('sorteio_' + otherDayName.value + '_players') || '[]');
+          return raw.filter(op => op && op.name && !players.value.some(p => p.name === op.name));
+        });
+        const filteredElenco = Vue.computed(() => {
+          const q = elencoSearch.value.trim().toLowerCase();
+          return q ? players.value.filter(p => p.name.toLowerCase().includes(q)) : players.value;
+        });
+        function computeStandings(list) {
+          const map = {};
+          const ensure = (name) => (map[name] || (map[name] = { name, jogos: 0, vitorias: 0, empates: 0, derrotas: 0 }));
+          const tally = (names, side, winner) => (names || []).forEach(n => {
+            const s = ensure(n); s.jogos++;
+            if (winner === 'empate') s.empates++;
+            else if (winner === side) s.vitorias++;
+            else s.derrotas++;
+          });
+          for (const m of (list || [])) { tally(m.preto, 'preto', m.winner); tally(m.vermelho, 'vermelho', m.winner); }
+          const arr = Object.values(map).map(s => ({ ...s, pontos: s.vitorias * 3 + s.empates }));
+          arr.sort((a, b) => b.pontos - a.pontos || b.vitorias - a.vitorias || a.name.localeCompare(b.name));
+          return arr;
+        }
+        function matchesForDay(day) {
+          return day === currentDay.value ? matches.value : JSON.parse(localStorage.getItem('sorteio_' + day + '_matches') || '[]');
+        }
+        const standingsView = Vue.computed(() => {
+          const list = rankingScope.value === 'somado'
+            ? [...matchesForDay('segunda'), ...matchesForDay('quarta')]
+            : matchesForDay(rankingScope.value);
+          return computeStandings(list);
+        });
+
         // ---- Cloud sync functions ----
         let cloudPushTimer = null;
         function snapshotBlob() {
@@ -1659,6 +1407,10 @@
         return {
           currentDay, switchDay, dayLabels: DAY_LABELS, days: DAYS,
           cloudEnabled, canEdit, syncStatus, unlockEdit, lockEdit,
+          activeTab, timesTab, rankingScope, elencoSearch, showAdd, showBlocks, nowLabel,
+          confPct, confBase, confGuests, faltam, otherDayName, otherDayPlayers,
+          filteredElenco, standingsView, fmtAvg, teamAvg, starsOn, starsOff,
+          incScore, decScore, winLabel, winColor, realIndex, goAddGuest, copyPlayer,
           players, newName, newRatings, teamPreto, teamVermelho,
           editingIndex, editRatings, history, swapFrom, drawModified,
           blocks, blockPlayer1, blockPlayer2, availableBlockPlayers, activePlayers,

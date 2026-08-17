@@ -8,6 +8,16 @@ jogador, confirmação por dia, convidados, placar por partida, classificação 
 - **UI toda em português** (pt-BR). Os termos do domínio são em português e devem ser mantidos
   (Time Base, Times da Partida, Convidado, "extra", "falta", etc.).
 
+## Interface: app de 5 abas (redesign "Patota Galo Tito")
+
+A UI é um **app mobile de 5 abas** com header fixo (escudo + PATOTA GALO TITO + pills Segunda/Quarta) e barra inferior. Fontes **Bebas Neue** (títulos/números) + **DM Sans** (texto); paleta escura com vermelho `#f0272e`, dourado `#f0b050`, verde `#3fa84a`, azul "extra" `#6fb7e8`.
+
+- **`activeTab`** (`hoje`/`times`/`placar`/`ranking`/`elenco`) controla a aba; `timesTab` (partida/base) e `rankingScope` (segunda/quarta/**somado**) são sub-abas.
+- **Toda a lógica é a mesma** (sorteio base/partida, regra 2 vitórias, floaters, patotas, Firebase) — o redesign trocou só a apresentação (`<style>` + template) e adicionou helpers: `incScore/decScore` (placar +/−), `fmtAvg`/`teamAvg`, `standingsView` (classificação por escopo, com "somado" lendo os `matches` das duas patotas), `otherDayPlayers`/`copyPlayer` (copiar jogador entre patotas), `filteredElenco` (busca), `realIndex`.
+- **Somente-leitura**: quando `cloudEnabled && !canEdit`, `.app-main` ganha `.locked` e todo elemento com classe **`.lockable`** vira `pointer-events:none`. Controles de leitura (abas, pills, busca) ficam fora do lock.
+- **Mobile deve seguir o mockup** do Claude Design; **desktop** só alarga o container (760/900px) e listas viram 2 colunas (`.list` em grid). Não transformar em dashboard largo.
+- O `index.html` foi remontado preservando `<head>` e `<script>` originais via `sed` (partes em `.design-sync`? não — foi build ad-hoc). Backup do anterior em `index.html.bak` (gitignored).
+
 ## Stack e execução
 
 - **Um único arquivo:** `index.html` (HTML + CSS + JS, tudo inline). Não há build, bundler nem dependências instaladas.
