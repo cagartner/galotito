@@ -1,0 +1,87 @@
+/* ==========================================================================
+   Galotito — Design Tokens
+   Linguagem visual do app de sorteio de times (tema escuro).
+   Fonte da verdade: extraído do CSS de index.html.
+   Uso: importe este arquivo e consuma as variáveis via var(--token).
+   ========================================================================== */
+
+:root {
+  /* ---- Cores: superfícies / fundo ------------------------------------ */
+  --color-bg:            #1a1a2e; /* fundo da página + inputs             */
+  --color-surface:       #16213e; /* cards, linhas, painéis padrão        */
+  --color-surface-deep:  #0f1a30; /* painel de edição de notas            */
+
+  /* ---- Cores: marca / ações ----------------------------------------- */
+  --color-primary:       #e94560; /* vermelho da marca (destaque, remover, alerta) */
+  --color-action:        #0f3460; /* azul de ações (sortear, gerar, registrar)     */
+  --color-gold:          #f5c518; /* estrelas de nota, convidado, pontos           */
+  --color-success:       #2e7d32; /* confirmado (check preenchido)                 */
+  --color-success-bright:#4caf50; /* vitórias / toggle ativo                       */
+  --color-info:          #4fc3f7; /* "extra" (jogador avulso na partida)           */
+  --color-link:          #8ab4f8; /* botão "usar esta base"                        */
+
+  /* ---- Cores: estados translúcidos ---------------------------------- */
+  --color-primary-soft:  rgba(233, 69, 96, 0.15); /* fundo do aviso de re-sorteio */
+  --color-primary-swap:  rgba(233, 69, 96, 0.30); /* jogador selecionado p/ troca */
+  --color-primary-text:  #ffb3c0;                 /* texto sobre o aviso vermelho */
+  --color-gold-soft:     rgba(245, 197, 24, 0.10); /* fundo da dica de troca      */
+
+  /* ---- Cores: texto (do mais forte ao mais fraco) ------------------- */
+  --color-text:          #eee;  /* texto primário            */
+  --color-text-2:        #ccc;  /* secundário                */
+  --color-text-muted:    #aaa;  /* títulos de seção, labels  */
+  --color-text-subtle:   #888;  /* auxiliar                  */
+  --color-text-faint:    #666;  /* datas, posição, faint     */
+  --color-text-on-color: #fff;  /* texto sobre cor sólida    */
+
+  /* ---- Cores: times ------------------------------------------------- */
+  --color-team-preto-bg:      #111;     /* fundo Time/Base Preto        */
+  --color-team-preto-border:  #444;
+  --color-team-vermelho-bg:   #3a0a0a;  /* fundo Time/Base Vermelho     */
+  --color-team-vermelho-border: #e94560;
+
+  /* ---- Cores: linhas / divisores ------------------------------------ */
+  --color-divider:       rgba(255, 255, 255, 0.10);
+  --color-divider-soft:  rgba(255, 255, 255, 0.05);
+
+  /* ---- Tipografia ---------------------------------------------------- */
+  --font-family:  'Segoe UI', sans-serif;
+  --text-hero:    1.8rem;  /* h1                          */
+  --text-score:   1.4rem;  /* placar no histórico         */
+  --text-xl:      1.2rem;  /* título de time              */
+  --text-lg:      1.15rem; /* título de seção (1., 2.)    */
+  --text-md:      1.1rem;  /* h2 de seção                 */
+  --text-base:    1rem;    /* corpo, inputs, botões       */
+  --text-sm:      0.9rem;  /* labels, texto secundário    */
+  --text-xs:      0.8rem;  /* datas, dicas, cabeçalho tabela */
+  --text-2xs:     0.7rem;  /* tags (lesionado, convidado) */
+  --text-3xs:     0.65rem; /* tags menores (conv./extra)  */
+  --font-weight-normal: 400;
+  --font-weight-bold:   600;
+  --font-weight-heavy:  700;
+
+  /* ---- Raios -------------------------------------------------------- */
+  --radius-card:  12px; /* cards, painéis, times            */
+  --radius:       8px;  /* botões, inputs, itens de lista   */
+  --radius-sm:    6px;  /* elementos compactos              */
+  --radius-tag:   5px;  /* tags/badges                      */
+  --radius-xs:    4px;  /* micro                            */
+
+  /* ---- Espaçamento -------------------------------------------------- */
+  --space-2:   2px;
+  --space-4:   4px;
+  --space-6:   6px;
+  --space-8:   8px;
+  --space-10: 10px;
+  --space-12: 12px;
+  --space-14: 14px;
+  --space-16: 16px;  /* padding padrão de card            */
+  --space-20: 20px;  /* padding da página                 */
+  --space-24: 24px;  /* separação entre seções            */
+
+  /* ---- Layout ------------------------------------------------------- */
+  --container-max: 800px;
+
+  /* ---- Foco / interação --------------------------------------------- */
+  --focus-ring: 0 0 0 2px var(--color-primary);
+}
