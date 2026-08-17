@@ -3,8 +3,42 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Sorteio de Times</title>
+  <title>Patota Galo Tito</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=DM+Sans:wght@400;500;700&display=swap" rel="stylesheet">
   <script src="https://unpkg.com/vue@3/dist/vue.global.js"></script>
+  <!-- Sincronizacao entre aparelhos (Firebase Firestore). Falha aqui = app funciona so com localStorage. -->
+  <script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/12.17.1/firebase-app.js";
+    import { getFirestore, doc, onSnapshot, setDoc } from "https://www.gstatic.com/firebasejs/12.17.1/firebase-firestore.js";
+
+    const firebaseConfig = {
+      apiKey: "AIzaSyCtN8z_v0aFT89vDM6N551UhkX__gpmp9M",
+      authDomain: "galo-tito.firebaseapp.com",
+      projectId: "galo-tito",
+      storageBucket: "galo-tito.firebasestorage.app",
+      messagingSenderId: "911479522159",
+      appId: "1:911479522159:web:ce06de2400a4b8672c5e9a"
+    };
+
+    const api = { ready: false };
+    try {
+      const app = initializeApp(firebaseConfig);
+      const db = getFirestore(app);
+      // Leitura aberta em tempo real; ignora o eco das nossas proprias gravacoes locais.
+      api.subscribe = (day, cb, onErr) => onSnapshot(doc(db, "patotas", day),
+        (snap) => { if (snap.metadata.hasPendingWrites) return; cb(snap.exists() ? snap.data() : null); },
+        (err) => { console.warn("[sync] leitura:", err && err.code); if (onErr) onErr(err); });
+      // Gravacao (retorna promessa; as regras exigem o editCode correto).
+      api.save = (day, data) => setDoc(doc(db, "patotas", day), { ...data, updatedAt: Date.now() });
+      api.ready = true;
+    } catch (e) {
+      console.warn("[sync] Firebase indisponivel, usando so localStorage:", e);
+    }
+    window.GaloSync = api;
+    window.dispatchEvent(new Event("galosync-ready"));
+  </script>
   <style>
     * { box-sizing: border-box; margin: 0; padding: 0; }
     body {
@@ -39,6 +73,24 @@
       background: #e94560;
       color: #fff;
     }
+
+    /* Cloud sync bar */
+    .sync-bar {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      background: #16213e;
+      border-radius: 10px;
+      padding: 9px 12px;
+      margin-bottom: 16px;
+      font-size: 0.85rem;
+      color: #ccc;
+    }
+    .sync-dot { width: 9px; height: 9px; border-radius: 50%; background: #4caf50; flex-shrink: 0; }
+    .sync-dot.off { background: #f5c518; }
+    .sync-label { flex: 1; }
+    .btn-unlock { background: #0f3460; color: #fff; font-size: 0.8rem; padding: 7px 12px; }
+    .locked { opacity: 0.9; pointer-events: none; }
 
     /* Data toolbar */
     .data-toolbar {
@@ -553,6 +605,13 @@
       >{{ dayLabels[d] }}</button>
     </div>
 
+    <div class="sync-bar" v-if="cloudEnabled">
+      <span class="sync-dot" :class="{ off: !canEdit }"></span>
+      <span class="sync-label">{{ canEdit ? 'Edição liberada · sincronizando' : 'Somente leitura' }}</span>
+      <button class="btn-unlock" @click="canEdit ? lockEdit() : unlockEdit()">{{ canEdit ? 'Bloquear' : 'Liberar edição' }}</button>
+    </div>
+
+    <div :class="{ locked: cloudEnabled && !canEdit }">
     <div class="data-toolbar">
       <button type="button" class="btn-data" @click="exportData">&#11015; Exportar dados</button>
       <label class="btn-data">
@@ -836,6 +895,7 @@
       </div>
       <button class="btn-clear-history" @click="clearHistory">Limpar historico</button>
     </div>
+    </div>
   </div>
 
   <script>
@@ -940,6 +1000,14 @@
 
         let suspendPersist = false;
 
+        // ---- Cloud sync (Firebase) state ----
+        const cloudEnabled = ref(false);   // Firebase carregou
+        const canEdit = ref(true);         // pode editar? (true offline; definido ao ligar a nuvem)
+        const editCode = ref(localStorage.getItem('sorteio_editcode') || '');
+        const syncStatus = ref('local');   // 'local' | 'online' | 'erro'
+        let applyingRemote = false;        // aplicando dado remoto -> nao re-empurrar
+        let cloudUnsub = null;             // cancela a assinatura do dia atual
+
         // Flush the current day's data to its keys synchronously (avoids async watcher races)
         function saveCurrentDay() {
           localStorage.setItem(storeKey('players'), JSON.stringify(players.value));
@@ -977,6 +1045,7 @@
           newName.value = '';
           newGuest.value = false;
           Vue.nextTick(() => { suspendPersist = false; });
+          subscribeCloud(); // ouvir o novo dia na nuvem
         }
 
         // Win tally for the current teams (matches recorded since the last sort)
@@ -1041,21 +1110,25 @@
         watch(players, (val) => {
           if (suspendPersist) return;
           localStorage.setItem(storeKey('players'), JSON.stringify(val));
+          if (!applyingRemote) pushCloud();
         }, { deep: true });
 
         watch(blocks, (val) => {
           if (suspendPersist) return;
           localStorage.setItem(storeKey('blocks'), JSON.stringify(val));
+          if (!applyingRemote) pushCloud();
         }, { deep: true });
 
         watch(history, (val) => {
           if (suspendPersist) return;
           localStorage.setItem(storeKey('history'), JSON.stringify(val));
+          if (!applyingRemote) pushCloud();
         }, { deep: true });
 
         watch(matches, (val) => {
           if (suspendPersist) return;
           localStorage.setItem(storeKey('matches'), JSON.stringify(val));
+          if (!applyingRemote) pushCloud();
         }, { deep: true });
 
         function addPlayer() {
@@ -1184,6 +1257,7 @@
         function saveLastDraw() {
           const draw = { id: currentDrawId.value, preto: teamPreto.value, vermelho: teamVermelho.value };
           localStorage.setItem(storeKey('last_draw'), JSON.stringify(draw));
+          if (!applyingRemote) pushCloud();
         }
 
         // DRAW 1: the base teams — ALL active regulars, persists until a team wins twice.
@@ -1484,8 +1558,107 @@
           event.target.value = '';
         }
 
+        // ---- Cloud sync functions ----
+        let cloudPushTimer = null;
+        function snapshotBlob() {
+          return {
+            players: players.value,
+            blocks: blocks.value,
+            history: history.value,
+            matches: matches.value,
+            lastDraw: { id: currentDrawId.value, preto: teamPreto.value, vermelho: teamVermelho.value }
+          };
+        }
+        function pushCloud() {
+          const fb = window.GaloSync;
+          if (!fb || !fb.ready || !cloudEnabled.value || !canEdit.value || !editCode.value) return;
+          clearTimeout(cloudPushTimer);
+          cloudPushTimer = setTimeout(() => {
+            fb.save(currentDay.value, { ...snapshotBlob(), editCode: editCode.value })
+              .catch((e) => console.warn('[sync] gravacao:', e && e.code));
+          }, 400);
+        }
+        function applyRemote(data) {
+          if (!data) return;
+          // Seguranca: nao sobrescreve dados locais com um remoto vazio (evita apagar tudo)
+          const remoteEmpty = !(data.players && data.players.length) &&
+                              !(data.history && data.history.length) &&
+                              !(data.matches && data.matches.length);
+          const localHasData = players.value.length || history.value.length || matches.value.length;
+          if (remoteEmpty && localHasData) { if (canEdit.value) pushCloud(); return; }
+          applyingRemote = true;
+          players.value = Array.isArray(data.players) ? data.players.map(migratePlayer) : [];
+          blocks.value = Array.isArray(data.blocks) ? data.blocks : [];
+          history.value = Array.isArray(data.history) ? data.history : [];
+          matches.value = Array.isArray(data.matches) ? data.matches : [];
+          const ld = data.lastDraw;
+          teamPreto.value = ld && Array.isArray(ld.preto) ? ld.preto : [];
+          teamVermelho.value = ld && Array.isArray(ld.vermelho) ? ld.vermelho : [];
+          currentDrawId.value = ld && ld.id ? ld.id : null;
+          saveCurrentDay(); // cache local
+          Vue.nextTick(() => { applyingRemote = false; });
+        }
+        function subscribeCloud() {
+          const fb = window.GaloSync;
+          if (!fb || !fb.ready) return;
+          if (cloudUnsub) { cloudUnsub(); cloudUnsub = null; }
+          const day = currentDay.value;
+          cloudUnsub = fb.subscribe(day, (data) => {
+            if (day !== currentDay.value) return; // trocou de dia enquanto o dado chegava
+            if (!cloudEnabled.value) {            // 1a conexao bem-sucedida: ativa a nuvem
+              cloudEnabled.value = true;
+              canEdit.value = !!editCode.value;   // sem codigo salvo -> somente leitura
+            }
+            syncStatus.value = 'online';
+            if (data) applyRemote(data);
+            else if (canEdit.value) pushCloud();  // nuvem vazia e posso escrever -> semeia com o local
+          }, (err) => {
+            // Leitura falhou (regras ou banco ausente) -> segue em modo local editavel
+            cloudEnabled.value = false;
+            canEdit.value = true;
+            syncStatus.value = 'erro';
+          });
+        }
+        function initCloud() {
+          const fb = window.GaloSync;
+          if (!fb || !fb.ready) { syncStatus.value = 'local'; return; }
+          syncStatus.value = 'conectando';
+          // Nao trava em leitura ainda: so ativa a nuvem quando uma leitura funcionar (subscribeCloud)
+          subscribeCloud();
+        }
+        function unlockEdit() {
+          const fb = window.GaloSync;
+          if (!fb || !fb.ready) { alert('Sincronizacao indisponivel no momento.'); return; }
+          const code = (prompt('Codigo de edicao:') || '').trim();
+          if (!code) return;
+          // Verifica o codigo tentando gravar o dia atual com ele
+          fb.save(currentDay.value, { ...snapshotBlob(), editCode: code })
+            .then(() => {
+              editCode.value = code;
+              localStorage.setItem('sorteio_editcode', code);
+              canEdit.value = true;
+            })
+            .catch(() => alert('Codigo incorreto.'));
+        }
+        function lockEdit() {
+          editCode.value = '';
+          localStorage.removeItem('sorteio_editcode');
+          canEdit.value = false;
+        }
+        function requireEdit() {
+          if (cloudEnabled.value && !canEdit.value) {
+            alert('Somente leitura. Toque em "Liberar edicao" e informe o codigo 3352.');
+            return false;
+          }
+          return true;
+        }
+        // Liga a nuvem quando o modulo Firebase estiver pronto
+        if (window.GaloSync) initCloud();
+        else window.addEventListener('galosync-ready', initCloud);
+
         return {
           currentDay, switchDay, dayLabels: DAY_LABELS, days: DAYS,
+          cloudEnabled, canEdit, syncStatus, unlockEdit, lockEdit,
           players, newName, newRatings, teamPreto, teamVermelho,
           editingIndex, editRatings, history, swapFrom, drawModified,
           blocks, blockPlayer1, blockPlayer2, availableBlockPlayers, activePlayers,
