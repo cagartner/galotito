@@ -1364,13 +1364,21 @@
           const preto = isBase ? baseTeamPreto.value : teamPreto.value;
           const verm = isBase ? baseTeamVermelho.value : teamVermelho.value;
           if (!preto.length && !verm.length) return '';
-          const linha = (p) => (p.goalkeeper ? '🧤 ' : '') + p.name;
-          const bloco = (emoji, nome, arr) => `${emoji} *${nome}* (${teamAvg(arr)})\n` + arr.map(linha).join('\n');
+          const linha = (p) => {
+            let nome = p.name;
+            if (p.guest) nome += ' _(convidado)_';
+            else if (p.floater) nome += ' _(extra)_';
+            return (p.goalkeeper ? '🧤 ' : '• ') + nome;
+          };
+          const bloco = (emoji, nome, arr) =>
+            `${emoji} *${nome}*  _(média ${teamAvg(arr)})_\n` + arr.map(linha).join('\n');
           const header = isBase
-            ? `${DAY_LABELS[currentDay.value]} · Time base`
-            : `${DAY_LABELS[currentDay.value]} · ${new Date().toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit' })}`;
-          return `*PATOTA GALO TITO*\n${header}\n\n` +
-            bloco('⚫', 'PRETO', preto) + '\n\n' + bloco('🔴', 'VERMELHO', verm);
+            ? `_${DAY_LABELS[currentDay.value]} · time base_`
+            : `_${DAY_LABELS[currentDay.value]} · ${new Date().toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit' })}_`;
+          return `⚽ *PATOTA GALO TITO*\n${header}\n\n` +
+            bloco('⚫', 'PRETO', preto) + '\n\n' +
+            bloco('🔴', 'VERMELHO', verm) +
+            '\n\n_🧤 goleiro · convidado marcado_';
         }
         function copyTeams() {
           const texto = buildTeamsText();
