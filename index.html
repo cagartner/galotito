@@ -201,6 +201,9 @@
     }
     .btn-share:hover { filter: brightness(1.05); }
     .copy-msg { text-align: center; font-size: 13px; color: var(--green); margin-top: -4px; }
+    .date-row { display: flex; align-items: center; justify-content: space-between; gap: 10px; }
+    .date-input { background: var(--card2); border: 1px solid var(--line); border-radius: 8px; padding: 8px 10px; color: var(--t1); font-size: 13px; color-scheme: dark; }
+    .date-clear { background: none; color: var(--info); font-size: 12px; padding: 4px 6px; }
     .falta-chips { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 10px; }
     .chip {
       background: var(--card2); color: var(--t3); border: 1px solid var(--line);
@@ -477,6 +480,11 @@
                 <span class="score-x">×</span>
                 <div class="score-col v"><span class="score-team">VERMELHO</span><span class="score-big">{{ Number(scoreVermelho)||0 }}</span><div class="score-btns"><button @click="decScore('vermelho')">−</button><button @click="incScore('vermelho')">+</button></div></div>
               </div>
+              <div class="date-row">
+                <span class="muted" style="font-size:13px">Data do jogo</span>
+                <input type="date" v-model="matchDate" class="date-input">
+                <button v-if="matchDate" class="date-clear" @click="matchDate=''" title="Hoje">hoje</button>
+              </div>
               <button class="btn-primary" @click="registerMatch">Registrar partida</button>
             </template>
           </div>
@@ -750,6 +758,7 @@
         const history = ref(load('history', '[]'));
         const matches = ref(load('matches', '[]'));
         const scorePreto = ref(null);
+        const matchDate = ref(''); // data do jogo (vazio = hoje); permite lancar placar de data anterior
         const scoreVermelho = ref(null);
         const swapFrom = ref(null);
         const drawModified = ref(false);
@@ -978,6 +987,8 @@
         }
 
         function removePlayer(index) {
+          const p = players.value[index];
+          if (!confirm('Remover ' + (p ? p.name : 'este jogador') + ' do elenco?')) return;
           if (editingIndex.value === index) editingIndex.value = -1;
           else if (editingIndex.value > index) editingIndex.value--;
           players.value.splice(index, 1);
@@ -1290,7 +1301,15 @@
             return;
           }
           const now = new Date();
-          const dateStr = now.toLocaleDateString('pt-BR') + ' ' + now.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
+          const hora = now.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
+          // data ajustavel: se preenchida (yyyy-mm-dd), usa ela; senao, hoje
+          let dateStr;
+          if (matchDate.value) {
+            const [y, m, d] = matchDate.value.split('-');
+            dateStr = `${d}/${m}/${y} ${hora}`;
+          } else {
+            dateStr = now.toLocaleDateString('pt-BR') + ' ' + hora;
+          }
           // quem marcou presenca mas faltou: nao conta como presente e vai para "faltas"
           const faltou = new Set(players.value.filter(p => p.faltou).map(p => p.name));
           matches.value.unshift({
@@ -1619,7 +1638,7 @@
           blocks, blockPlayer1, blockPlayer2, availableBlockPlayers, activePlayers,
           newGuest, confirmedPlayers, confirmedGuests,
           baseRegulars, baseSorted, baseTeamPreto, baseTeamVermelho, unassignedRegulars, matchPlayerCount,
-          matches, scorePreto, scoreVermelho, sessionRecord, mustResort, standings,
+          matches, scorePreto, scoreVermelho, matchDate, sessionRecord, mustResort, standings,
           categories: CATEGORIES,
           addPlayer, removePlayer, clearGuests, toggleActive, toggleEdit, saveRatings,
           toggleConfirm, confirmAll, newDay,
