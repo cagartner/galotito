@@ -125,6 +125,8 @@
 
     /* Main scroll area */
     .app-main { flex: 1; min-height: 0; overflow-y: auto; -webkit-overflow-scrolling: touch; padding: 14px 18px 24px; display: flex; flex-direction: column; gap: 14px; }
+    /* filhos nao podem encolher: senao um bloco com overflow:hidden (ex.: .rank) e comprimido e nao rola */
+    .app-main > * { flex-shrink: 0; }
     .app-main.locked { opacity: 0.94; }
     .app-main.locked .lockable { pointer-events: none; }
 

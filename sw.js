@@ -1,7 +1,7 @@
 /* Service worker do Galo Tito.
    HTML: network-first (sempre a versao mais nova quando online; cache so como fallback offline).
    Estaticos locais: cache-first. CDNs (Vue/Firebase) passam direto pela rede. */
-const CACHE = 'galotito-v2';
+const CACHE = 'galotito-v3';
 const SHELL = ['./', './index.html', './manifest.json', './icons/icon-192.png', './icons/icon-512.png'];
 
 self.addEventListener('install', (e) => {
