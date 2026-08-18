@@ -176,6 +176,15 @@
     .tag.extra { color: var(--info); }
     .tag.injured { color: var(--t4); }
     .tag.falta { color: var(--red); }
+    .tag.gol { color: var(--green); }
+    .tag-xs.gol { color: var(--green); }
+    .linha-btn {
+      font-size: 11px; border-radius: 999px; padding: 3px 9px; white-space: nowrap;
+      border: 1px solid var(--line2); background: transparent; color: var(--t4);
+    }
+    .linha-btn.on { border-color: var(--info); color: var(--info); background: rgba(111,183,232,0.12); }
+    .ricon.gk { color: var(--green); }
+    .ricon.gk.off { color: var(--t5); filter: grayscale(1); opacity: 0.5; }
 
     /* Sub tabs */
     .subtabs { display: flex; gap: 4px; background: var(--card); border-radius: 999px; padding: 4px; }
@@ -362,9 +371,11 @@
           <div v-for="(p, i) in players" :key="i" class="prow" :class="{ on: p.confirmed && p.active, injured: !p.active }" @click="toggleConfirm(i)">
             <span class="pcheck" :class="{ on: p.confirmed && p.active }">{{ p.confirmed && p.active ? '✓' : '' }}</span>
             <span class="pname">{{ p.name }}</span>
-            <span v-if="p.guest" class="tag conv">conv.</span>
+            <span v-if="p.goalkeeper" class="tag gol">GOL</span>
+            <span v-else-if="p.guest" class="tag conv">conv.</span>
             <span v-else-if="p.active && p.base !== 'preto' && p.base !== 'vermelho'" class="tag extra">extra</span>
             <span v-if="!p.active" class="tag injured">lesionado</span>
+            <button v-if="p.goalkeeper && p.confirmed && p.active" class="linha-btn" :class="{ on: p.naLinha }" @click.stop="toggleNaLinha(i)">{{ p.naLinha ? 'na linha ✓' : 'na linha' }}</button>
             <span class="pavg">{{ fmtAvg(p.ratings) }}</span>
           </div>
         </div>
@@ -386,11 +397,11 @@
           <div v-if="baseSorted" class="teams-grid">
             <div class="teamcard preto">
               <div class="thead"><span class="tname">Base Preto</span><span class="tavg">{{ teamAvg(baseTeamPreto) }}</span></div>
-              <ul><li v-for="p in baseTeamPreto" :key="p.name" :class="{ faint: !p.confirmed }"><span class="nm">{{ p.name }}</span><span v-if="!p.confirmed" class="tag-xs falta">falta</span></li></ul>
+              <ul><li v-for="p in baseTeamPreto" :key="p.name" :class="{ faint: !p.confirmed }"><span class="nm">{{ p.name }}</span><span v-if="p.goalkeeper" class="tag-xs gol">GOL</span><span v-if="!p.confirmed" class="tag-xs falta">falta</span></li></ul>
             </div>
             <div class="teamcard vermelho">
               <div class="thead"><span class="tname">Base Vermelho</span><span class="tavg">{{ teamAvg(baseTeamVermelho) }}</span></div>
-              <ul><li v-for="p in baseTeamVermelho" :key="p.name" :class="{ faint: !p.confirmed }"><span class="nm">{{ p.name }}</span><span v-if="!p.confirmed" class="tag-xs falta">falta</span></li></ul>
+              <ul><li v-for="p in baseTeamVermelho" :key="p.name" :class="{ faint: !p.confirmed }"><span class="nm">{{ p.name }}</span><span v-if="p.goalkeeper" class="tag-xs gol">GOL</span><span v-if="!p.confirmed" class="tag-xs falta">falta</span></li></ul>
             </div>
           </div>
           <p v-if="baseSorted && unassignedRegulars.length" class="screen-sub">Fora do time base: {{ unassignedRegulars.map(p=>p.name).join(', ') }} — se confirmados, entram como convidados na partida.</p>
@@ -404,11 +415,11 @@
           <div v-if="teamPreto.length || teamVermelho.length" class="teams-grid">
             <div class="teamcard preto">
               <div class="thead"><span class="tname">Preto</span><span class="tavg">{{ teamAvg(teamPreto) }}</span></div>
-              <ul><li v-for="(p,i) in teamPreto" :key="p.name" :class="{ sel: swapFrom && swapFrom.team==='preto' && swapFrom.index===i }" @click="selectSwap('preto', i)"><span class="nm">{{ p.name }}</span><span v-if="p.guest" class="tag-xs conv">conv.</span><span v-else-if="p.floater" class="tag-xs extra">extra</span></li></ul>
+              <ul><li v-for="(p,i) in teamPreto" :key="p.name" :class="{ sel: swapFrom && swapFrom.team==='preto' && swapFrom.index===i }" @click="selectSwap('preto', i)"><span class="nm">{{ p.name }}</span><span v-if="p.goalkeeper" class="tag-xs gol">GOL</span><template v-else><span v-if="p.guest" class="tag-xs conv">conv.</span><span v-else-if="p.floater" class="tag-xs extra">extra</span></template></li></ul>
             </div>
             <div class="teamcard vermelho">
               <div class="thead"><span class="tname">Vermelho</span><span class="tavg">{{ teamAvg(teamVermelho) }}</span></div>
-              <ul><li v-for="(p,i) in teamVermelho" :key="p.name" :class="{ sel: swapFrom && swapFrom.team==='vermelho' && swapFrom.index===i }" @click="selectSwap('vermelho', i)"><span class="nm">{{ p.name }}</span><span v-if="p.guest" class="tag-xs conv">conv.</span><span v-else-if="p.floater" class="tag-xs extra">extra</span></li></ul>
+              <ul><li v-for="(p,i) in teamVermelho" :key="p.name" :class="{ sel: swapFrom && swapFrom.team==='vermelho' && swapFrom.index===i }" @click="selectSwap('vermelho', i)"><span class="nm">{{ p.name }}</span><span v-if="p.goalkeeper" class="tag-xs gol">GOL</span><template v-else><span v-if="p.guest" class="tag-xs conv">conv.</span><span v-else-if="p.floater" class="tag-xs extra">extra</span></template></li></ul>
             </div>
           </div>
           <div v-if="teamPreto.length" class="swap-hint2 lockable">{{ swapFrom ? 'Toque num jogador do outro time para trocar' : 'Toque em dois jogadores para trocar de time' }}</div>
@@ -517,6 +528,7 @@
             </div>
           </div>
           <label class="guest-check"><input type="checkbox" v-model="newGuest"> Convidado (jogador de fora)</label>
+          <label class="guest-check"><input type="checkbox" v-model="newGoalkeeper"> Goleiro</label>
           <button class="btn-primary" @click="addPlayer(); showAdd=false">Adicionar</button>
         </div>
 
@@ -532,11 +544,13 @@
           <template v-for="p in filteredElenco" :key="p.name">
             <div class="erow" @click="toggleEdit(realIndex(p))">
               <span class="pname" :style="!p.active ? 'text-decoration:line-through;color:var(--t4)' : ''">{{ p.name }}</span>
+              <span v-if="p.goalkeeper" class="tag gol">GOL</span>
               <span v-if="p.guest" class="tag conv">conv.</span>
               <span v-if="!p.active" class="tag injured">lesionado</span>
               <span class="stars"><span class="on">{{ starsOn(p.ratings) }}</span><span class="off">{{ starsOff(p.ratings) }}</span></span>
               <span class="pavg">{{ fmtAvg(p.ratings) }}</span>
               <span class="row-actions lockable" @click.stop>
+                <button class="ricon gk" :class="{ off: !p.goalkeeper }" title="Goleiro" @click="toggleGoalkeeper(realIndex(p))">🧤</button>
                 <button class="ricon injury" :class="{ off: !p.active }" @click="toggleActive(realIndex(p))">{{ p.active ? '✓' : '✗' }}</button>
                 <button class="ricon del" @click="removePlayer(realIndex(p))">×</button>
               </span>
@@ -606,15 +620,15 @@
       { key: 'fisico', label: 'Cond. Fisico' },
       { key: 'finalizacao', label: 'Finalizacao' },
       { key: 'visao', label: 'Visao de Jogo' },
-      { key: 'fominha', label: 'Fominha' },
     ];
 
     function defaultRatings() {
-      return { geral: 3, fisico: 3, finalizacao: 3, visao: 3, fominha: 3 };
+      return { geral: 3, fisico: 3, finalizacao: 3, visao: 3 };
     }
 
+    // Media das 4 categorias (Fominha foi removida; ignorada em dados antigos)
     function avgRating(r) {
-      return (r.geral + r.fisico + r.finalizacao + r.visao + r.fominha) / 5;
+      return (r.geral + r.fisico + r.finalizacao + r.visao) / 4;
     }
 
     // How many players stayed on the "same" side vs the previous base draw
@@ -635,6 +649,8 @@
         if (p.confirmed === undefined) p.confirmed = false;
         if (p.guest === undefined) p.guest = false;
         if (p.base === undefined) p.base = null;
+        if (p.goalkeeper === undefined) p.goalkeeper = false;
+        if (p.naLinha === undefined) p.naLinha = false;
         return p;
       }
       const old = p.rating || 3;
@@ -644,7 +660,9 @@
         confirmed: false,
         guest: false,
         base: null,
-        ratings: { geral: old, fisico: 3, finalizacao: 3, visao: 3, fominha: 3 }
+        goalkeeper: false,
+        naLinha: false,
+        ratings: { geral: old, fisico: 3, finalizacao: 3, visao: 3 }
       };
     }
 
@@ -675,6 +693,7 @@
         const players = ref(load('players', '[]').map(migratePlayer));
         const newName = ref('');
         const newGuest = ref(false);
+        const newGoalkeeper = ref(false);
         const newRatings = reactive(defaultRatings());
         const teamPreto = ref([]);
         const teamVermelho = ref([]);
@@ -778,6 +797,8 @@
         const confirmedPlayers = Vue.computed(() => players.value.filter(p => p.active && p.confirmed));
         // Base pool = ALL active regulars (guests never enter the base draw; confirmation not required here)
         const baseRegulars = Vue.computed(() => players.value.filter(p => p.active && !p.guest));
+        const fieldRegulars = Vue.computed(() => baseRegulars.value.filter(p => !p.goalkeeper));   // jogadores de linha (balanceados)
+        const keeperRegulars = Vue.computed(() => baseRegulars.value.filter(p => p.goalkeeper));    // goleiros fixos
         const confirmedGuests = Vue.computed(() => players.value.filter(p => p.active && p.confirmed && p.guest));
 
         // Base teams derive from each regular's stored base assignment
@@ -850,11 +871,25 @@
             confirmed: newGuest.value,   // guests are added because they're playing today
             guest: newGuest.value,
             base: null,                  // set by the base draw (regulars only)
+            goalkeeper: newGoalkeeper.value,
+            naLinha: false,
             ratings: { ...newRatings }
           });
           newName.value = '';
           newGuest.value = false;
+          newGoalkeeper.value = false;
           Object.assign(newRatings, defaultRatings());
+        }
+
+        function toggleGoalkeeper(index) {
+          if (!requireEdit()) return;
+          players.value[index].goalkeeper = !players.value[index].goalkeeper;
+        }
+
+        function toggleNaLinha(index) {
+          const p = players.value[index];
+          if (!p.goalkeeper || !p.confirmed || !p.active) return;
+          p.naLinha = !p.naLinha;
         }
 
         function toggleConfirm(index) {
@@ -869,7 +904,7 @@
 
         function newDay() {
           if (!confirm('Iniciar um novo dia? Desmarca a presenca de todos (o TIME BASE e mantido) e limpa os times da partida atuais.')) return;
-          players.value.forEach(p => p.confirmed = false);
+          players.value.forEach(p => { p.confirmed = false; p.naLinha = false; });
           teamPreto.value = [];
           teamVermelho.value = [];
           currentDrawId.value = baseSorted.value ? Date.now() : null;
@@ -973,8 +1008,8 @@
 
         // DRAW 1: the base teams — ALL active regulars, persists until a team wins twice.
         function sortBaseTeams() {
-          const pool = baseRegulars.value;
-          if (pool.length < 2) return;
+          const pool = fieldRegulars.value; // goleiros nao entram no balanceamento de linha
+          if (baseRegulars.value.length < 2) return;
 
           // Previous base grouping so we can maximize the change
           const prevA = pool.filter(p => p.base === 'preto').map(p => p.name);
@@ -1059,15 +1094,25 @@
             bestB = b;
           }
 
-          // Random color, then store the base assignment on each regular
-          const [pretoArr, vermArr] = Math.random() < 0.5 ? [bestA, bestB] : [bestB, bestA];
-          const pretoNames = new Set(pretoArr.map(p => p.name));
-          const vermNames = new Set(vermArr.map(p => p.name));
-          players.value.forEach(p => {
-            if (pretoNames.has(p.name)) p.base = 'preto';
-            else if (vermNames.has(p.name)) p.base = 'vermelho';
-            else p.base = null; // injured/guest at draw time -> no base (plays as guest if they return)
-          });
+          // Atribui 1 goleiro por time; o goleiro melhor vai pro time de linha mais fraco (balanceia)
+          const keepers = keeperRegulars.value.map(p => ({ name: p.name, ratings: { ...p.ratings } }))
+            .sort((a, b) => avgRating(b.ratings) - avgRating(a.ratings));
+          const scoreA = teamScore(bestA), scoreB = teamScore(bestB);
+          let keeperA = null, keeperB = null;
+          if (keepers[0]) { if (scoreA <= scoreB) keeperA = keepers[0]; else keeperB = keepers[0]; }
+          if (keepers[1]) { if (!keeperA) keeperA = keepers[1]; else if (!keeperB) keeperB = keepers[1]; }
+          // goleiros extras (3o+) ficam sem base -> entram como reserva/linha na partida
+
+          // Cor aleatoria por lado; grava base nos jogadores de linha + goleiros atribuidos
+          const aIsPreto = Math.random() < 0.5;
+          const colorA = aIsPreto ? 'preto' : 'vermelho';
+          const colorB = aIsPreto ? 'vermelho' : 'preto';
+          const baseMap = {};
+          bestA.forEach(p => baseMap[p.name] = colorA);
+          bestB.forEach(p => baseMap[p.name] = colorB);
+          if (keeperA) baseMap[keeperA.name] = colorA;
+          if (keeperB) baseMap[keeperB.name] = colorB;
+          players.value.forEach(p => { p.base = baseMap[p.name] || null; });
 
           currentDrawId.value = Date.now();
 
@@ -1075,36 +1120,40 @@
           const dateStr = now.toLocaleDateString('pt-BR') + ' ' + now.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
           history.value.unshift({
             date: dateStr,
-            preto: pretoArr.map(p => p.name),
-            vermelho: vermArr.map(p => p.name)
+            preto: Object.keys(baseMap).filter(n => baseMap[n] === 'preto'),
+            vermelho: Object.keys(baseMap).filter(n => baseMap[n] === 'vermelho')
           });
 
           // Build today's match teams from the fresh base
           generateMatchTeams();
         }
 
-        // DRAW 2: the match teams — confirmed base members + the day's guests (auto-distributed).
+        // DRAW 2: the match teams — confirmed base members + guests (auto-distributed) + goleiros no gol.
         function generateMatchTeams() {
           if (!baseSorted.value) { alert('Sorteie o time base primeiro.'); return; }
 
-          const basePreto = baseRegulars.value
-            .filter(p => p.confirmed && p.base === 'preto')
+          const inGoal = (p) => p.goalkeeper && !p.naLinha; // goleiro que vai pro gol (nao "na linha")
+          const conf = (p) => p.active && p.confirmed;
+
+          // Jogadores de LINHA (goleiro "na linha" tambem conta como linha)
+          const basePreto = players.value
+            .filter(p => conf(p) && !p.guest && !inGoal(p) && p.base === 'preto')
             .map(p => ({ name: p.name, ratings: { ...p.ratings }, guest: false }));
-          const baseVerm = baseRegulars.value
-            .filter(p => p.confirmed && p.base === 'vermelho')
+          const baseVerm = players.value
+            .filter(p => conf(p) && !p.guest && !inGoal(p) && p.base === 'vermelho')
             .map(p => ({ name: p.name, ratings: { ...p.ratings }, guest: false }));
 
-          // Confirmed regulars with NO base team (they were injured during the base draw and
-          // are now available again) are treated like guests: auto-distributed into the match.
-          const floaters = baseRegulars.value
-            .filter(p => p.confirmed && p.base !== 'preto' && p.base !== 'vermelho')
+          // Avulsos de linha: regulares confirmados sem base (voltaram de lesao) — tratados como convidados
+          const floaters = players.value
+            .filter(p => conf(p) && !p.guest && !inGoal(p) && p.base !== 'preto' && p.base !== 'vermelho')
             .map(p => ({ name: p.name, ratings: { ...p.ratings }, guest: false, floater: true }));
           const guests = confirmedGuests.value
+            .filter(p => !inGoal(p))
             .map(p => ({ name: p.name, ratings: { ...p.ratings }, guest: true }));
 
-          // Distribute floaters + guests to keep the match teams balanced (size, then score)
+          // Distribui avulsos + convidados de linha (tamanho, depois nota)
           const extras = [...floaters, ...guests].sort((a, b) => avgRating(b.ratings) - avgRating(a.ratings));
-          const teamA = [...basePreto], teamB = [...baseVerm];
+          const teamA = [...basePreto], teamB = [...baseVerm]; // A = Preto, B = Vermelho
           let scoreA = teamScore(teamA), scoreB = teamScore(teamB);
           for (const g of extras) {
             let toA;
@@ -1114,8 +1163,22 @@
             else { teamB.push(g); scoreB += avgRating(g.ratings); }
           }
 
-          teamPreto.value = teamA;
-          teamVermelho.value = teamB;
+          // Goleiros no gol: 1 por time (prefere o do time base; convidado goleiro cobre falta)
+          const confKeepers = players.value.filter(p => conf(p) && inGoal(p));
+          let kPreto = confKeepers.find(k => k.base === 'preto');
+          let kVerm = confKeepers.find(k => k.base === 'vermelho');
+          const spares = confKeepers.filter(k => k !== kPreto && k !== kVerm);
+          if (!kPreto && spares.length) kPreto = spares.shift();
+          if (!kVerm && spares.length) kVerm = spares.shift();
+          // goleiros que sobraram (3o+) jogam na linha
+          spares.sort((a, b) => avgRating(b.ratings) - avgRating(a.ratings)).forEach(k => {
+            const g = { name: k.name, ratings: { ...k.ratings }, guest: !!k.guest, floater: true };
+            (teamA.length <= teamB.length ? teamA : teamB).push(g);
+          });
+          const gk = (p) => ({ name: p.name, ratings: { ...p.ratings }, guest: !!p.guest, goalkeeper: true });
+
+          teamPreto.value = kPreto ? [gk(kPreto), ...teamA] : teamA;
+          teamVermelho.value = kVerm ? [gk(kVerm), ...teamB] : teamB;
           swapFrom.value = null;
           drawModified.value = false;
           scorePreto.value = null;
@@ -1284,7 +1347,7 @@
           if (!name || !requireEdit()) return;
           const src = otherDayPlayers.value.find(p => p.name === name);
           if (!src) return;
-          players.value.push({ name: src.name, active: true, confirmed: false, guest: false, base: null, ratings: { ...src.ratings } });
+          players.value.push({ name: src.name, active: true, confirmed: false, guest: false, base: null, goalkeeper: !!src.goalkeeper, naLinha: false, ratings: { ...src.ratings } });
         }
 
         const confPct = Vue.computed(() => activePlayers.value.length ? Math.round(confirmedPlayers.value.length / activePlayers.value.length * 100) : 0);
@@ -1441,6 +1504,7 @@
           currentDay, switchDay, dayLabels: DAY_LABELS, days: DAYS,
           cloudEnabled, canEdit, syncStatus, unlockEdit, lockEdit,
           activeTab, timesTab, rankingScope, rankingMetric, elencoSearch, showAdd, showBlocks, nowLabel,
+          newGoalkeeper, toggleGoalkeeper, toggleNaLinha, keeperRegulars,
           confPct, confBase, confGuests, faltam, otherDayName, otherDayPlayers,
           filteredElenco, standingsView, attendanceView, fmtAvg, teamAvg, starsOn, starsOff,
           incScore, decScore, winLabel, winColor, realIndex, goAddGuest, copyPlayer,
