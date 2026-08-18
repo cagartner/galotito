@@ -2,8 +2,22 @@
 <html lang="pt-BR">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
   <title>Patota Galo Tito</title>
+  <!-- PWA: instalar na tela inicial -->
+  <link rel="manifest" href="manifest.json">
+  <meta name="theme-color" content="#08080a">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="Galo Tito">
+  <link rel="apple-touch-icon" href="icons/apple-touch-180.png">
+  <link rel="icon" href="icons/icon-192.png">
+  <script>
+    if ('serviceWorker' in navigator) {
+      window.addEventListener('load', () => { navigator.serviceWorker.register('sw.js').catch(() => {}); });
+    }
+  </script>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=DM+Sans:wght@400;500;700&display=swap" rel="stylesheet">
@@ -89,7 +103,7 @@
       overflow: hidden;
       position: relative;
     }
-    .app-header { flex: none; padding: 14px 18px 10px; display: flex; flex-direction: column; gap: 12px; border-bottom: 1px solid var(--line); }
+    .app-header { flex: none; padding: calc(14px + env(safe-area-inset-top, 0px)) 18px 10px; display: flex; flex-direction: column; gap: 12px; border-bottom: 1px solid var(--line); }
     .brand { display: flex; align-items: center; gap: 10px; }
     .brand img { width: 30px; height: auto; display: block; }
     .brand-name { font-family: var(--disp); font-size: 18px; letter-spacing: 0.08em; color: var(--t3); flex: 1; }
@@ -110,12 +124,12 @@
     .day-pills button.on { background: var(--red); color: #fff; }
 
     /* Main scroll area */
-    .app-main { flex: 1; overflow-y: auto; padding: 14px 18px 20px; display: flex; flex-direction: column; gap: 14px; }
+    .app-main { flex: 1; min-height: 0; overflow-y: auto; -webkit-overflow-scrolling: touch; padding: 14px 18px 24px; display: flex; flex-direction: column; gap: 14px; }
     .app-main.locked { opacity: 0.94; }
     .app-main.locked .lockable { pointer-events: none; }
 
     /* Bottom nav */
-    .app-nav { flex: none; display: flex; background: #101013; border-top: 1px solid var(--line); }
+    .app-nav { flex: none; display: flex; background: #101013; border-top: 1px solid var(--line); padding-bottom: env(safe-area-inset-bottom, 0px); }
     .app-nav button {
       flex: 1; background: transparent; padding: 11px 2px 16px; text-align: center;
       border-top: 2px solid transparent; font-size: 11px; color: var(--t4); font-weight: 500; letter-spacing: 0.04em;
@@ -185,6 +199,12 @@
     }
     .btn-share:hover { filter: brightness(1.05); }
     .copy-msg { text-align: center; font-size: 13px; color: var(--green); margin-top: -4px; }
+    .falta-chips { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 10px; }
+    .chip {
+      background: var(--card2); color: var(--t3); border: 1px solid var(--line);
+      border-radius: 999px; padding: 6px 12px; font-size: 13px;
+    }
+    .chip.faltou { background: var(--red-soft); border-color: var(--red); color: var(--red-text); text-decoration: line-through; }
     .tag-xs.gol { color: var(--green); }
     .linha-btn {
       font-size: 11px; border-radius: 999px; padding: 3px 9px; white-space: nowrap;
@@ -250,7 +270,7 @@
     /* Ranking table */
     .rank { background: var(--card); border-radius: 18px; overflow: hidden; }
     .rank .rhead, .rank .rrow { display: grid; grid-template-columns: 26px 1fr 30px 30px 30px 42px; gap: 4px; padding: 11px 14px; align-items: center; }
-    .rank.att .rhead, .rank.att .rrow { grid-template-columns: 26px 1fr 50px 52px; }
+    .rank.att .rhead, .rank.att .rrow { grid-template-columns: 24px 1fr 44px 44px 50px; }
     .rank .rhead { font-size: 11px; color: var(--t4); letter-spacing: 0.06em; border-bottom: 1px solid rgba(255,255,255,0.09); }
     .rank .rrow { font-size: 14px; border-bottom: 1px solid rgba(255,255,255,0.05); }
     .rank .rrow:last-child { border-bottom: none; }
@@ -425,11 +445,11 @@
           <div v-if="teamPreto.length || teamVermelho.length" class="teams-grid">
             <div class="teamcard preto">
               <div class="thead"><span class="tname">Preto</span><span class="tavg">{{ teamAvg(teamPreto) }}</span></div>
-              <ul><li v-for="(p,i) in teamPreto" :key="p.name" :class="{ sel: swapFrom && swapFrom.team==='preto' && swapFrom.index===i }" @click="selectSwap('preto', i)"><span class="nm"><span v-if="p.goalkeeper" class="glove">🧤</span>{{ p.name }}</span><template v-if="!p.goalkeeper"><span v-if="p.guest" class="tag-xs conv">conv.</span><span v-else-if="p.floater" class="tag-xs extra">extra</span></template></li></ul>
+              <ul><li v-for="p in teamPretoView" :key="p.name" :class="{ sel: swapFrom && swapFrom.team==='preto' && swapFrom.name===p.name }" @click="selectSwap('preto', p)"><span class="nm"><span v-if="p.goalkeeper" class="glove">🧤</span>{{ p.name }}</span><template v-if="!p.goalkeeper"><span v-if="p.guest" class="tag-xs conv">conv.</span><span v-else-if="p.floater" class="tag-xs extra">extra</span></template></li></ul>
             </div>
             <div class="teamcard vermelho">
               <div class="thead"><span class="tname">Vermelho</span><span class="tavg">{{ teamAvg(teamVermelho) }}</span></div>
-              <ul><li v-for="(p,i) in teamVermelho" :key="p.name" :class="{ sel: swapFrom && swapFrom.team==='vermelho' && swapFrom.index===i }" @click="selectSwap('vermelho', i)"><span class="nm"><span v-if="p.goalkeeper" class="glove">🧤</span>{{ p.name }}</span><template v-if="!p.goalkeeper"><span v-if="p.guest" class="tag-xs conv">conv.</span><span v-else-if="p.floater" class="tag-xs extra">extra</span></template></li></ul>
+              <ul><li v-for="p in teamVermelhoView" :key="p.name" :class="{ sel: swapFrom && swapFrom.team==='vermelho' && swapFrom.name===p.name }" @click="selectSwap('vermelho', p)"><span class="nm"><span v-if="p.goalkeeper" class="glove">🧤</span>{{ p.name }}</span><template v-if="!p.goalkeeper"><span v-if="p.guest" class="tag-xs conv">conv.</span><span v-else-if="p.floater" class="tag-xs extra">extra</span></template></li></ul>
             </div>
           </div>
           <div v-if="teamPreto.length" class="swap-hint2 lockable">{{ swapFrom ? 'Toque num jogador do outro time para trocar' : 'Toque em dois jogadores para trocar de time' }}</div>
@@ -461,6 +481,17 @@
           <div class="card round-line">
             <span class="muted" style="font-size:13px">Rodada atual</span>
             <span class="v">{{ sessionRecord.preto }} <span style="color:var(--t5)">×</span> <span style="color:var(--red)">{{ sessionRecord.vermelho }}</span><span v-if="sessionRecord.empate" style="font-size:14px;color:var(--t4)"> · {{ sessionRecord.empate }} emp.</span></span>
+          </div>
+
+          <div class="card lockable">
+            <button class="row-between" style="width:100%;background:none;color:inherit" @click="showFaltas = !showFaltas">
+              <span class="label-cap">FALTOU? (marcou e não veio) {{ faltosos.length ? '· ' + faltosos.length : '' }}</span>
+              <span class="muted" style="font-size:18px">{{ showFaltas ? '−' : '+' }}</span>
+            </button>
+            <div v-if="showFaltas" class="falta-chips">
+              <button v-for="p in confirmedPlayers" :key="p.name" class="chip" :class="{ faltou: p.faltou }" @click="toggleFaltou(realIndex(p))">{{ p.name }}</button>
+            </div>
+            <p v-if="showFaltas" class="hint-small">Quem for marcado não conta como presente e vira "falta" no ranking ao registrar a partida.</p>
           </div>
         </template>
 
@@ -511,12 +542,13 @@
         </div>
 
         <div class="rank att" v-else-if="rankingMetric==='presenca' && attendanceView.length">
-          <div class="rhead"><span>#</span><span>JOGADOR</span><span class="c">JOGOS</span><span style="text-align:right">DIAS</span></div>
+          <div class="rhead"><span>#</span><span>JOGADOR</span><span class="c">JOGOS</span><span class="c">DIAS</span><span style="text-align:right">FALTAS</span></div>
           <div class="rrow" v-for="(s,i) in attendanceView" :key="s.name">
             <span class="pos">{{ i+1 }}</span>
             <span class="nm">{{ s.name }}</span>
             <span class="c">{{ s.jogos }}</span>
-            <span class="pts">{{ s.dias }}</span>
+            <span class="v">{{ s.dias }}</span>
+            <span class="d" style="text-align:right">{{ s.faltas || '-' }}</span>
           </div>
         </div>
 
@@ -663,6 +695,7 @@
         if (p.base === undefined) p.base = null;
         if (p.goalkeeper === undefined) p.goalkeeper = false;
         if (p.naLinha === undefined) p.naLinha = false;
+        if (p.faltou === undefined) p.faltou = false;
         return p;
       }
       const old = p.rating || 3;
@@ -674,6 +707,7 @@
         base: null,
         goalkeeper: false,
         naLinha: false,
+        faltou: false,
         ratings: { geral: old, fisico: 3, finalizacao: 3, visao: 3 }
       };
     }
@@ -730,6 +764,7 @@
         const showAdd = ref(false);
         const showBlocks = ref(false);
         const copyMsg = ref('');
+        const showFaltas = ref(false);
         const nowLabel = new Date().toLocaleDateString('pt-BR', { weekday: 'short', day: '2-digit', month: 'short' }) +
           ' · ' + new Date().toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
 
@@ -816,9 +851,13 @@
 
         // Base teams derive from each regular's stored base assignment
         const baseSorted = Vue.computed(() => baseRegulars.value.some(p => p.base === 'preto' || p.base === 'vermelho'));
-        const gkFirst = (arr) => [...arr].sort((a, b) => (b.goalkeeper ? 1 : 0) - (a.goalkeeper ? 1 : 0));
+        // Ordena: goleiros no topo, depois alfabetico
+        const gkFirst = (arr) => [...arr].sort((a, b) => (b.goalkeeper ? 1 : 0) - (a.goalkeeper ? 1 : 0) || a.name.localeCompare(b.name, 'pt-BR'));
         const baseTeamPreto = Vue.computed(() => gkFirst(baseRegulars.value.filter(p => p.base === 'preto')));
         const baseTeamVermelho = Vue.computed(() => gkFirst(baseRegulars.value.filter(p => p.base === 'vermelho')));
+        // Times da partida ordenados (goleiro no topo, depois alfabetico) para exibir/copiar
+        const teamPretoView = Vue.computed(() => gkFirst(teamPreto.value));
+        const teamVermelhoView = Vue.computed(() => gkFirst(teamVermelho.value));
         const unassignedRegulars = Vue.computed(() => baseRegulars.value.filter(p => p.base !== 'preto' && p.base !== 'vermelho'));
         // Everyone confirmed plays: base members + recovered regulars (as guests) + real guests
         const matchPlayerCount = Vue.computed(() => confirmedPlayers.value.length);
@@ -887,6 +926,7 @@
             base: null,                  // set by the base draw (regulars only)
             goalkeeper: newGoalkeeper.value,
             naLinha: false,
+            faltou: false,
             ratings: { ...newRatings }
           });
           newName.value = '';
@@ -906,6 +946,13 @@
           p.naLinha = !p.naLinha;
         }
 
+        function toggleFaltou(index) {
+          if (!requireEdit()) return;
+          const p = players.value[index];
+          if (!p.confirmed || !p.active) return;
+          p.faltou = !p.faltou;
+        }
+
         function toggleConfirm(index) {
           const p = players.value[index];
           if (!p.active) return; // injured players can't be confirmed
@@ -918,7 +965,7 @@
 
         function newDay() {
           if (!confirm('Iniciar um novo dia? Desmarca a presenca de todos (o TIME BASE e mantido) e limpa os times da partida atuais.')) return;
-          players.value.forEach(p => { p.confirmed = false; p.naLinha = false; });
+          players.value.forEach(p => { p.confirmed = false; p.naLinha = false; p.faltou = false; });
           teamPreto.value = [];
           teamVermelho.value = [];
           currentDrawId.value = baseSorted.value ? Date.now() : null;
@@ -1201,32 +1248,26 @@
           saveLastDraw();
         }
 
-        function selectSwap(team, index) {
-          if (!swapFrom.value) {
-            swapFrom.value = { team, index };
-            return;
-          }
-          if (swapFrom.value.team === team && swapFrom.value.index === index) {
-            swapFrom.value = null;
-            return;
-          }
+        // Troca por identidade (o nome), pois a exibicao esta ordenada (indices nao batem com o array real)
+        function selectSwap(team, p) {
+          if (!swapFrom.value) { swapFrom.value = { team, name: p.name }; return; }
           if (swapFrom.value.team === team) {
-            swapFrom.value = { team, index };
+            swapFrom.value = swapFrom.value.name === p.name ? null : { team, name: p.name };
             return;
           }
-
           const fromTeam = swapFrom.value.team === 'preto' ? teamPreto : teamVermelho;
           const toTeam = team === 'preto' ? teamPreto : teamVermelho;
-          const fromIdx = swapFrom.value.index;
-          const temp = fromTeam.value[fromIdx];
-          fromTeam.value[fromIdx] = toTeam.value[index];
-          toTeam.value[index] = temp;
-
-          teamPreto.value = [...teamPreto.value];
-          teamVermelho.value = [...teamVermelho.value];
-
+          const fi = fromTeam.value.findIndex(x => x.name === swapFrom.value.name);
+          const ti = toTeam.value.findIndex(x => x.name === p.name);
+          if (fi !== -1 && ti !== -1) {
+            const temp = fromTeam.value[fi];
+            fromTeam.value[fi] = toTeam.value[ti];
+            toTeam.value[ti] = temp;
+            teamPreto.value = [...teamPreto.value];
+            teamVermelho.value = [...teamVermelho.value];
+            drawModified.value = true;
+          }
           swapFrom.value = null;
-          drawModified.value = true;
         }
 
         function saveModifiedDraw() {
@@ -1248,11 +1289,14 @@
           }
           const now = new Date();
           const dateStr = now.toLocaleDateString('pt-BR') + ' ' + now.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
+          // quem marcou presenca mas faltou: nao conta como presente e vai para "faltas"
+          const faltou = new Set(players.value.filter(p => p.faltou).map(p => p.name));
           matches.value.unshift({
             drawId: currentDrawId.value,
             date: dateStr,
-            preto: teamPreto.value.map(p => p.name),
-            vermelho: teamVermelho.value.map(p => p.name),
+            preto: teamPreto.value.map(p => p.name).filter(n => !faltou.has(n)),
+            vermelho: teamVermelho.value.map(p => p.name).filter(n => !faltou.has(n)),
+            faltas: [...faltou],
             scorePreto: sp,
             scoreVermelho: sv,
             winner: sp > sv ? 'preto' : (sv > sp ? 'vermelho' : 'empate')
@@ -1361,8 +1405,8 @@
         // Monta o texto formatado dos times (partida ou base) pra colar no WhatsApp
         function buildTeamsText() {
           const isBase = timesTab.value === 'base';
-          const preto = isBase ? baseTeamPreto.value : teamPreto.value;
-          const verm = isBase ? baseTeamVermelho.value : teamVermelho.value;
+          const preto = isBase ? baseTeamPreto.value : teamPretoView.value;
+          const verm = isBase ? baseTeamVermelho.value : teamVermelhoView.value;
           if (!preto.length && !verm.length) return '';
           const linha = (p) => {
             let nome = p.name;
@@ -1399,7 +1443,7 @@
           if (!name || !requireEdit()) return;
           const src = otherDayPlayers.value.find(p => p.name === name);
           if (!src) return;
-          players.value.push({ name: src.name, active: true, confirmed: false, guest: false, base: null, goalkeeper: !!src.goalkeeper, naLinha: false, ratings: { ...src.ratings } });
+          players.value.push({ name: src.name, active: true, confirmed: false, guest: false, base: null, goalkeeper: !!src.goalkeeper, naLinha: false, faltou: false, ratings: { ...src.ratings } });
         }
 
         // Em modo nuvem sem edicao liberada: notas individuais ficam ocultas
@@ -1408,6 +1452,7 @@
         const confBase = Vue.computed(() => baseRegulars.value.filter(p => p.confirmed).length);
         const confGuests = Vue.computed(() => confirmedGuests.value.length);
         const faltam = Vue.computed(() => activePlayers.value.filter(p => !p.confirmed).length);
+        const faltosos = Vue.computed(() => players.value.filter(p => p.faltou));
         const otherDayName = Vue.computed(() => currentDay.value === 'segunda' ? 'quarta' : 'segunda');
         const otherDayPlayers = Vue.computed(() => {
           const raw = JSON.parse(localStorage.getItem('sorteio_' + otherDayName.value + '_players') || '[]');
@@ -1415,7 +1460,8 @@
         });
         const filteredElenco = Vue.computed(() => {
           const q = elencoSearch.value.trim().toLowerCase();
-          return q ? players.value.filter(p => p.name.toLowerCase().includes(q)) : players.value;
+          const list = q ? players.value.filter(p => p.name.toLowerCase().includes(q)) : players.value;
+          return gkFirst(list); // goleiros no topo, depois alfabetico
         });
         function computeStandings(list) {
           const map = {};
@@ -1442,16 +1488,19 @@
         // Presenca: quantos DIAS distintos cada jogador compareceu (+ total de partidas)
         function computeAttendance(list) {
           const map = {};
+          const ensure = (n) => (map[n] || (map[n] = { name: n, jogos: 0, days: new Set(), faltaDays: new Set() }));
           const add = (names, dayKey) => (names || []).forEach(n => {
-            const s = map[n] || (map[n] = { name: n, jogos: 0, days: new Set() });
-            s.jogos++; if (dayKey) s.days.add(dayKey);
+            const s = ensure(n); s.jogos++; if (dayKey) s.days.add(dayKey);
+          });
+          const addFalta = (names, dayKey) => (names || []).forEach(n => {
+            const s = ensure(n); if (dayKey) s.faltaDays.add(dayKey);
           });
           for (const m of (list || [])) {
             const dayKey = (m.date || '').split(' ')[0]; // data sem a hora
-            add(m.preto, dayKey); add(m.vermelho, dayKey);
+            add(m.preto, dayKey); add(m.vermelho, dayKey); addFalta(m.faltas, dayKey);
           }
-          const arr = Object.values(map).map(s => ({ name: s.name, jogos: s.jogos, dias: s.days.size }));
-          arr.sort((a, b) => b.dias - a.dias || b.jogos - a.jogos || a.name.localeCompare(b.name));
+          const arr = Object.values(map).map(s => ({ name: s.name, jogos: s.jogos, dias: s.days.size, faltas: s.faltaDays.size }));
+          arr.sort((a, b) => b.dias - a.dias || a.faltas - b.faltas || b.jogos - a.jogos || a.name.localeCompare(b.name));
           return arr;
         }
         const attendanceView = Vue.computed(() => computeAttendance(rankingMatches.value));
@@ -1559,10 +1608,11 @@
           cloudEnabled, canEdit, syncStatus, unlockEdit, lockEdit,
           activeTab, timesTab, rankingScope, rankingMetric, elencoSearch, showAdd, showBlocks, nowLabel,
           newGoalkeeper, toggleGoalkeeper, toggleNaLinha, keeperRegulars,
+          showFaltas, faltosos, toggleFaltou,
           confPct, confBase, confGuests, faltam, otherDayName, otherDayPlayers,
           filteredElenco, standingsView, attendanceView, fmtAvg, teamAvg, starsOn, starsOff, readOnly,
           incScore, decScore, winLabel, winColor, realIndex, goAddGuest, copyPlayer, copyTeams, copyMsg,
-          players, newName, newRatings, teamPreto, teamVermelho,
+          players, newName, newRatings, teamPreto, teamVermelho, teamPretoView, teamVermelhoView,
           editingIndex, editRatings, history, swapFrom, drawModified,
           blocks, blockPlayer1, blockPlayer2, availableBlockPlayers, activePlayers,
           newGuest, confirmedPlayers, confirmedGuests,
