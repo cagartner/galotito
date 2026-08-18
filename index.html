@@ -233,6 +233,7 @@
     /* Ranking table */
     .rank { background: var(--card); border-radius: 18px; overflow: hidden; }
     .rank .rhead, .rank .rrow { display: grid; grid-template-columns: 26px 1fr 30px 30px 30px 42px; gap: 4px; padding: 11px 14px; align-items: center; }
+    .rank.att .rhead, .rank.att .rrow { grid-template-columns: 26px 1fr 50px 52px; }
     .rank .rhead { font-size: 11px; color: var(--t4); letter-spacing: 0.06em; border-bottom: 1px solid rgba(255,255,255,0.09); }
     .rank .rrow { font-size: 14px; border-bottom: 1px solid rgba(255,255,255,0.05); }
     .rank .rrow:last-child { border-bottom: none; }
@@ -463,13 +464,18 @@
 
       <!-- ===================== RANKING ===================== -->
       <template v-if="activeTab === 'ranking'">
-        <div class="screen-title"><h1>Ranking</h1><span class="screen-sub">{{ standingsView.length }} jogadores</span></div>
+        <div class="screen-title"><h1>Ranking</h1><span class="screen-sub">{{ (rankingMetric==='presenca' ? attendanceView : standingsView).length }} jogadores</span></div>
+        <div class="subtabs">
+          <button :class="{ on: rankingMetric==='pontos' }" @click="rankingMetric='pontos'">Pontos</button>
+          <button :class="{ on: rankingMetric==='presenca' }" @click="rankingMetric='presenca'">Presença</button>
+        </div>
         <div class="subtabs">
           <button :class="{ on: rankingScope==='segunda' }" @click="rankingScope='segunda'">Segunda</button>
           <button :class="{ on: rankingScope==='quarta' }" @click="rankingScope='quarta'">Quarta</button>
           <button :class="{ on: rankingScope==='somado' }" @click="rankingScope='somado'">Somado</button>
         </div>
-        <div class="rank" v-if="standingsView.length">
+
+        <div class="rank" v-if="rankingMetric==='pontos' && standingsView.length">
           <div class="rhead"><span>#</span><span>JOGADOR</span><span class="c">J</span><span class="c">V</span><span class="c">D</span><span style="text-align:right">PTS</span></div>
           <div class="rrow" v-for="(s,i) in standingsView" :key="s.name">
             <span class="pos">{{ i+1 }}</span>
@@ -480,6 +486,17 @@
             <span class="pts">{{ s.pontos }}</span>
           </div>
         </div>
+
+        <div class="rank att" v-else-if="rankingMetric==='presenca' && attendanceView.length">
+          <div class="rhead"><span>#</span><span>JOGADOR</span><span class="c">JOGOS</span><span style="text-align:right">DIAS</span></div>
+          <div class="rrow" v-for="(s,i) in attendanceView" :key="s.name">
+            <span class="pos">{{ i+1 }}</span>
+            <span class="nm">{{ s.name }}</span>
+            <span class="c">{{ s.jogos }}</span>
+            <span class="pts">{{ s.dias }}</span>
+          </div>
+        </div>
+
         <p v-else class="empty">Sem partidas registradas ainda.</p>
       </template>
 
@@ -677,6 +694,7 @@
         const activeTab = ref('hoje');
         const timesTab = ref('partida');
         const rankingScope = ref(currentDay.value);
+        const rankingMetric = ref('pontos'); // 'pontos' | 'presenca'
         const elencoSearch = ref('');
         const showAdd = ref(false);
         const showBlocks = ref(false);
@@ -1299,12 +1317,27 @@
         function matchesForDay(day) {
           return day === currentDay.value ? matches.value : JSON.parse(localStorage.getItem('sorteio_' + day + '_matches') || '[]');
         }
-        const standingsView = Vue.computed(() => {
-          const list = rankingScope.value === 'somado'
-            ? [...matchesForDay('segunda'), ...matchesForDay('quarta')]
-            : matchesForDay(rankingScope.value);
-          return computeStandings(list);
-        });
+        const rankingMatches = Vue.computed(() => rankingScope.value === 'somado'
+          ? [...matchesForDay('segunda'), ...matchesForDay('quarta')]
+          : matchesForDay(rankingScope.value));
+        const standingsView = Vue.computed(() => computeStandings(rankingMatches.value));
+
+        // Presenca: quantos DIAS distintos cada jogador compareceu (+ total de partidas)
+        function computeAttendance(list) {
+          const map = {};
+          const add = (names, dayKey) => (names || []).forEach(n => {
+            const s = map[n] || (map[n] = { name: n, jogos: 0, days: new Set() });
+            s.jogos++; if (dayKey) s.days.add(dayKey);
+          });
+          for (const m of (list || [])) {
+            const dayKey = (m.date || '').split(' ')[0]; // data sem a hora
+            add(m.preto, dayKey); add(m.vermelho, dayKey);
+          }
+          const arr = Object.values(map).map(s => ({ name: s.name, jogos: s.jogos, dias: s.days.size }));
+          arr.sort((a, b) => b.dias - a.dias || b.jogos - a.jogos || a.name.localeCompare(b.name));
+          return arr;
+        }
+        const attendanceView = Vue.computed(() => computeAttendance(rankingMatches.value));
 
         // ---- Cloud sync functions ----
         let cloudPushTimer = null;
@@ -1407,9 +1440,9 @@
         return {
           currentDay, switchDay, dayLabels: DAY_LABELS, days: DAYS,
           cloudEnabled, canEdit, syncStatus, unlockEdit, lockEdit,
-          activeTab, timesTab, rankingScope, elencoSearch, showAdd, showBlocks, nowLabel,
+          activeTab, timesTab, rankingScope, rankingMetric, elencoSearch, showAdd, showBlocks, nowLabel,
           confPct, confBase, confGuests, faltam, otherDayName, otherDayPlayers,
-          filteredElenco, standingsView, fmtAvg, teamAvg, starsOn, starsOff,
+          filteredElenco, standingsView, attendanceView, fmtAvg, teamAvg, starsOn, starsOff,
           incScore, decScore, winLabel, winColor, realIndex, goAddGuest, copyPlayer,
           players, newName, newRatings, teamPreto, teamVermelho,
           editingIndex, editRatings, history, swapFrom, drawModified,
