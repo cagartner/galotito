@@ -177,6 +177,14 @@
     .tag.injured { color: var(--t4); }
     .tag.falta { color: var(--red); }
     .tag.gol { color: var(--green); }
+    .glove { margin-right: 5px; }
+    .btn-share {
+      width: 100%; background: #25d366; color: #06331a; border-radius: 12px;
+      padding: 14px; font-size: 15px; font-weight: 700; margin-top: 4px;
+      display: flex; align-items: center; justify-content: center; gap: 8px;
+    }
+    .btn-share:hover { filter: brightness(1.05); }
+    .copy-msg { text-align: center; font-size: 13px; color: var(--green); margin-top: -4px; }
     .tag-xs.gol { color: var(--green); }
     .linha-btn {
       font-size: 11px; border-radius: 999px; padding: 3px 9px; white-space: nowrap;
@@ -376,7 +384,7 @@
             <span v-else-if="p.active && p.base !== 'preto' && p.base !== 'vermelho'" class="tag extra">extra</span>
             <span v-if="!p.active" class="tag injured">lesionado</span>
             <button v-if="p.goalkeeper && p.confirmed && p.active" class="linha-btn" :class="{ on: p.naLinha }" @click.stop="toggleNaLinha(i)">{{ p.naLinha ? 'na linha ✓' : 'na linha' }}</button>
-            <span class="pavg">{{ fmtAvg(p.ratings) }}</span>
+            <span v-if="!readOnly" class="pavg">{{ fmtAvg(p.ratings) }}</span>
           </div>
         </div>
         <p v-else class="empty">Nenhum jogador. Cadastre no Elenco.</p>
@@ -397,14 +405,16 @@
           <div v-if="baseSorted" class="teams-grid">
             <div class="teamcard preto">
               <div class="thead"><span class="tname">Base Preto</span><span class="tavg">{{ teamAvg(baseTeamPreto) }}</span></div>
-              <ul><li v-for="p in baseTeamPreto" :key="p.name" :class="{ faint: !p.confirmed }"><span class="nm">{{ p.name }}</span><span v-if="p.goalkeeper" class="tag-xs gol">GOL</span><span v-if="!p.confirmed" class="tag-xs falta">falta</span></li></ul>
+              <ul><li v-for="p in baseTeamPreto" :key="p.name" :class="{ faint: !p.confirmed }"><span class="nm"><span v-if="p.goalkeeper" class="glove">🧤</span>{{ p.name }}</span><span v-if="!p.confirmed" class="tag-xs falta">falta</span></li></ul>
             </div>
             <div class="teamcard vermelho">
               <div class="thead"><span class="tname">Base Vermelho</span><span class="tavg">{{ teamAvg(baseTeamVermelho) }}</span></div>
-              <ul><li v-for="p in baseTeamVermelho" :key="p.name" :class="{ faint: !p.confirmed }"><span class="nm">{{ p.name }}</span><span v-if="p.goalkeeper" class="tag-xs gol">GOL</span><span v-if="!p.confirmed" class="tag-xs falta">falta</span></li></ul>
+              <ul><li v-for="p in baseTeamVermelho" :key="p.name" :class="{ faint: !p.confirmed }"><span class="nm"><span v-if="p.goalkeeper" class="glove">🧤</span>{{ p.name }}</span><span v-if="!p.confirmed" class="tag-xs falta">falta</span></li></ul>
             </div>
           </div>
           <p v-if="baseSorted && unassignedRegulars.length" class="screen-sub">Fora do time base: {{ unassignedRegulars.map(p=>p.name).join(', ') }} — se confirmados, entram como convidados na partida.</p>
+          <button v-if="baseSorted" class="btn-share" @click="copyTeams">📋 Copiar times para o WhatsApp</button>
+          <p v-if="copyMsg" class="copy-msg">{{ copyMsg }}</p>
         </template>
 
         <template v-else>
@@ -415,15 +425,17 @@
           <div v-if="teamPreto.length || teamVermelho.length" class="teams-grid">
             <div class="teamcard preto">
               <div class="thead"><span class="tname">Preto</span><span class="tavg">{{ teamAvg(teamPreto) }}</span></div>
-              <ul><li v-for="(p,i) in teamPreto" :key="p.name" :class="{ sel: swapFrom && swapFrom.team==='preto' && swapFrom.index===i }" @click="selectSwap('preto', i)"><span class="nm">{{ p.name }}</span><span v-if="p.goalkeeper" class="tag-xs gol">GOL</span><template v-else><span v-if="p.guest" class="tag-xs conv">conv.</span><span v-else-if="p.floater" class="tag-xs extra">extra</span></template></li></ul>
+              <ul><li v-for="(p,i) in teamPreto" :key="p.name" :class="{ sel: swapFrom && swapFrom.team==='preto' && swapFrom.index===i }" @click="selectSwap('preto', i)"><span class="nm"><span v-if="p.goalkeeper" class="glove">🧤</span>{{ p.name }}</span><template v-if="!p.goalkeeper"><span v-if="p.guest" class="tag-xs conv">conv.</span><span v-else-if="p.floater" class="tag-xs extra">extra</span></template></li></ul>
             </div>
             <div class="teamcard vermelho">
               <div class="thead"><span class="tname">Vermelho</span><span class="tavg">{{ teamAvg(teamVermelho) }}</span></div>
-              <ul><li v-for="(p,i) in teamVermelho" :key="p.name" :class="{ sel: swapFrom && swapFrom.team==='vermelho' && swapFrom.index===i }" @click="selectSwap('vermelho', i)"><span class="nm">{{ p.name }}</span><span v-if="p.goalkeeper" class="tag-xs gol">GOL</span><template v-else><span v-if="p.guest" class="tag-xs conv">conv.</span><span v-else-if="p.floater" class="tag-xs extra">extra</span></template></li></ul>
+              <ul><li v-for="(p,i) in teamVermelho" :key="p.name" :class="{ sel: swapFrom && swapFrom.team==='vermelho' && swapFrom.index===i }" @click="selectSwap('vermelho', i)"><span class="nm"><span v-if="p.goalkeeper" class="glove">🧤</span>{{ p.name }}</span><template v-if="!p.goalkeeper"><span v-if="p.guest" class="tag-xs conv">conv.</span><span v-else-if="p.floater" class="tag-xs extra">extra</span></template></li></ul>
             </div>
           </div>
           <div v-if="teamPreto.length" class="swap-hint2 lockable">{{ swapFrom ? 'Toque num jogador do outro time para trocar' : 'Toque em dois jogadores para trocar de time' }}</div>
           <button v-if="drawModified" class="btn-ghost lockable" @click="saveModifiedDraw">Salvar alterações</button>
+          <button v-if="teamPreto.length" class="btn-share" @click="copyTeams">📋 Copiar times para o WhatsApp</button>
+          <p v-if="copyMsg" class="copy-msg">{{ copyMsg }}</p>
         </template>
       </template>
 
@@ -547,15 +559,15 @@
               <span v-if="p.goalkeeper" class="tag gol">GOL</span>
               <span v-if="p.guest" class="tag conv">conv.</span>
               <span v-if="!p.active" class="tag injured">lesionado</span>
-              <span class="stars"><span class="on">{{ starsOn(p.ratings) }}</span><span class="off">{{ starsOff(p.ratings) }}</span></span>
-              <span class="pavg">{{ fmtAvg(p.ratings) }}</span>
+              <span v-if="!readOnly" class="stars"><span class="on">{{ starsOn(p.ratings) }}</span><span class="off">{{ starsOff(p.ratings) }}</span></span>
+              <span v-if="!readOnly" class="pavg">{{ fmtAvg(p.ratings) }}</span>
               <span class="row-actions lockable" @click.stop>
                 <button class="ricon gk" :class="{ off: !p.goalkeeper }" title="Goleiro" @click="toggleGoalkeeper(realIndex(p))">🧤</button>
                 <button class="ricon injury" :class="{ off: !p.active }" @click="toggleActive(realIndex(p))">{{ p.active ? '✓' : '✗' }}</button>
                 <button class="ricon del" @click="removePlayer(realIndex(p))">×</button>
               </span>
             </div>
-            <div v-if="editingIndex === realIndex(p)" class="form-card lockable">
+            <div v-if="editingIndex === realIndex(p) && !readOnly" class="form-card lockable">
               <div class="label-cap">NOTAS DE {{ p.name.toUpperCase() }}</div>
               <div class="rate-grid">
                 <div class="rate-row" v-for="cat in categories" :key="cat.key">
@@ -717,6 +729,7 @@
         const elencoSearch = ref('');
         const showAdd = ref(false);
         const showBlocks = ref(false);
+        const copyMsg = ref('');
         const nowLabel = new Date().toLocaleDateString('pt-BR', { weekday: 'short', day: '2-digit', month: 'short' }) +
           ' · ' + new Date().toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
 
@@ -803,8 +816,9 @@
 
         // Base teams derive from each regular's stored base assignment
         const baseSorted = Vue.computed(() => baseRegulars.value.some(p => p.base === 'preto' || p.base === 'vermelho'));
-        const baseTeamPreto = Vue.computed(() => baseRegulars.value.filter(p => p.base === 'preto'));
-        const baseTeamVermelho = Vue.computed(() => baseRegulars.value.filter(p => p.base === 'vermelho'));
+        const gkFirst = (arr) => [...arr].sort((a, b) => (b.goalkeeper ? 1 : 0) - (a.goalkeeper ? 1 : 0));
+        const baseTeamPreto = Vue.computed(() => gkFirst(baseRegulars.value.filter(p => p.base === 'preto')));
+        const baseTeamVermelho = Vue.computed(() => gkFirst(baseRegulars.value.filter(p => p.base === 'vermelho')));
         const unassignedRegulars = Vue.computed(() => baseRegulars.value.filter(p => p.base !== 'preto' && p.base !== 'vermelho'));
         // Everyone confirmed plays: base members + recovered regulars (as guests) + real guests
         const matchPlayerCount = Vue.computed(() => confirmedPlayers.value.length);
@@ -954,6 +968,7 @@
         }
 
         function toggleEdit(index) {
+          if (cloudEnabled.value && !canEdit.value) return; // somente leitura: nao abre as notas
           if (editingIndex.value === index) {
             editingIndex.value = -1;
             return;
@@ -1343,6 +1358,35 @@
         function winColor(w) { return w === 'vermelho' ? 'var(--red)' : w === 'preto' ? 'var(--t3)' : 'var(--t4)'; }
         function realIndex(p) { return players.value.findIndex(x => x === p); }
         function goAddGuest() { activeTab.value = 'elenco'; showAdd.value = true; newGuest.value = true; }
+        // Monta o texto formatado dos times (partida ou base) pra colar no WhatsApp
+        function buildTeamsText() {
+          const isBase = timesTab.value === 'base';
+          const preto = isBase ? baseTeamPreto.value : teamPreto.value;
+          const verm = isBase ? baseTeamVermelho.value : teamVermelho.value;
+          if (!preto.length && !verm.length) return '';
+          const linha = (p) => (p.goalkeeper ? '🧤 ' : '') + p.name;
+          const bloco = (emoji, nome, arr) => `${emoji} *${nome}* (${teamAvg(arr)})\n` + arr.map(linha).join('\n');
+          const header = isBase
+            ? `${DAY_LABELS[currentDay.value]} · Time base`
+            : `${DAY_LABELS[currentDay.value]} · ${new Date().toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit' })}`;
+          return `*PATOTA GALO TITO*\n${header}\n\n` +
+            bloco('⚫', 'PRETO', preto) + '\n\n' + bloco('🔴', 'VERMELHO', verm);
+        }
+        function copyTeams() {
+          const texto = buildTeamsText();
+          if (!texto) { alert('Gere os times primeiro.'); return; }
+          const ok = () => { copyMsg.value = 'Copiado! Agora é só colar no WhatsApp 📋'; setTimeout(() => { copyMsg.value = ''; }, 3000); };
+          const fallback = () => {
+            const ta = document.createElement('textarea');
+            ta.value = texto; ta.style.position = 'fixed'; ta.style.opacity = '0';
+            document.body.appendChild(ta); ta.select();
+            try { document.execCommand('copy'); ok(); } catch (e) { alert('Nao consegui copiar. Segure para selecionar:\n\n' + texto); }
+            document.body.removeChild(ta);
+          };
+          if (navigator.clipboard && navigator.clipboard.writeText) {
+            navigator.clipboard.writeText(texto).then(ok).catch(fallback);
+          } else fallback();
+        }
         function copyPlayer(name) {
           if (!name || !requireEdit()) return;
           const src = otherDayPlayers.value.find(p => p.name === name);
@@ -1350,6 +1394,8 @@
           players.value.push({ name: src.name, active: true, confirmed: false, guest: false, base: null, goalkeeper: !!src.goalkeeper, naLinha: false, ratings: { ...src.ratings } });
         }
 
+        // Em modo nuvem sem edicao liberada: notas individuais ficam ocultas
+        const readOnly = Vue.computed(() => cloudEnabled.value && !canEdit.value);
         const confPct = Vue.computed(() => activePlayers.value.length ? Math.round(confirmedPlayers.value.length / activePlayers.value.length * 100) : 0);
         const confBase = Vue.computed(() => baseRegulars.value.filter(p => p.confirmed).length);
         const confGuests = Vue.computed(() => confirmedGuests.value.length);
@@ -1506,8 +1552,8 @@
           activeTab, timesTab, rankingScope, rankingMetric, elencoSearch, showAdd, showBlocks, nowLabel,
           newGoalkeeper, toggleGoalkeeper, toggleNaLinha, keeperRegulars,
           confPct, confBase, confGuests, faltam, otherDayName, otherDayPlayers,
-          filteredElenco, standingsView, attendanceView, fmtAvg, teamAvg, starsOn, starsOff,
-          incScore, decScore, winLabel, winColor, realIndex, goAddGuest, copyPlayer,
+          filteredElenco, standingsView, attendanceView, fmtAvg, teamAvg, starsOn, starsOff, readOnly,
+          incScore, decScore, winLabel, winColor, realIndex, goAddGuest, copyPlayer, copyTeams, copyMsg,
           players, newName, newRatings, teamPreto, teamVermelho,
           editingIndex, editRatings, history, swapFrom, drawModified,
           blocks, blockPlayer1, blockPlayer2, availableBlockPlayers, activePlayers,
