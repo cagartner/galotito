@@ -430,13 +430,15 @@
           <div v-if="baseSorted" class="teams-grid">
             <div class="teamcard preto">
               <div class="thead"><span class="tname">Base Preto</span><span class="tavg">{{ teamAvg(baseTeamPreto) }}</span></div>
-              <ul><li v-for="p in baseTeamPreto" :key="p.name" :class="{ faint: !p.confirmed }"><span class="nm"><span v-if="p.goalkeeper" class="glove">🧤</span>{{ p.name }}</span><span v-if="!p.confirmed" class="tag-xs falta">falta</span></li></ul>
+              <ul><li v-for="p in baseTeamPreto" :key="p.name" :class="{ faint: showBaseFaltantes && !p.confirmed, sel: swapFromBase && swapFromBase.team==='preto' && swapFromBase.name===p.name }" @click="selectSwapBase('preto', p)"><span class="nm"><span v-if="p.goalkeeper" class="glove">🧤</span>{{ p.name }}</span><span v-if="showBaseFaltantes && !p.confirmed" class="tag-xs falta">falta</span></li></ul>
             </div>
             <div class="teamcard vermelho">
               <div class="thead"><span class="tname">Base Vermelho</span><span class="tavg">{{ teamAvg(baseTeamVermelho) }}</span></div>
-              <ul><li v-for="p in baseTeamVermelho" :key="p.name" :class="{ faint: !p.confirmed }"><span class="nm"><span v-if="p.goalkeeper" class="glove">🧤</span>{{ p.name }}</span><span v-if="!p.confirmed" class="tag-xs falta">falta</span></li></ul>
+              <ul><li v-for="p in baseTeamVermelho" :key="p.name" :class="{ faint: showBaseFaltantes && !p.confirmed, sel: swapFromBase && swapFromBase.team==='vermelho' && swapFromBase.name===p.name }" @click="selectSwapBase('vermelho', p)"><span class="nm"><span v-if="p.goalkeeper" class="glove">🧤</span>{{ p.name }}</span><span v-if="showBaseFaltantes && !p.confirmed" class="tag-xs falta">falta</span></li></ul>
             </div>
           </div>
+          <div v-if="baseSorted && !readOnly" class="swap-hint2">{{ swapFromBase ? 'Toque num jogador do outro time para trocar' : 'Toque em dois jogadores para trocar entre os times base' }}</div>
+          <button v-if="baseSorted && baseFaltantes" class="btn-ghost sm" @click="showBaseFaltantes = !showBaseFaltantes">{{ showBaseFaltantes ? 'Ocultar faltantes' : 'Ver faltantes (' + baseFaltantes + ')' }}</button>
           <p v-if="baseSorted && unassignedRegulars.length" class="screen-sub">Fora do time base: {{ unassignedRegulars.map(p=>p.name).join(', ') }} — se confirmados, entram como convidados na partida.</p>
           <button v-if="baseSorted" class="btn-share" @click="copyTeams">📋 Copiar times para o WhatsApp</button>
           <p v-if="copyMsg" class="copy-msg">{{ copyMsg }}</p>
@@ -776,6 +778,8 @@
         const showBlocks = ref(false);
         const copyMsg = ref('');
         const showFaltas = ref(false);
+        const showBaseFaltantes = ref(false); // na aba base, mostrar quem nao confirmou
+        const swapFromBase = ref(null);        // troca de jogadores no time base
         const nowLabel = new Date().toLocaleDateString('pt-BR', { weekday: 'short', day: '2-digit', month: 'short' }) +
           ' · ' + new Date().toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
 
@@ -869,6 +873,8 @@
         // Times da partida ordenados (goleiro no topo, depois alfabetico) para exibir/copiar
         const teamPretoView = Vue.computed(() => gkFirst(teamPreto.value));
         const teamVermelhoView = Vue.computed(() => gkFirst(teamVermelho.value));
+        // Base sempre mostra todos; o botao "ver faltantes" so muda o ESTILO dos nao confirmados
+        const baseFaltantes = Vue.computed(() => baseRegulars.value.filter(p => (p.base === 'preto' || p.base === 'vermelho') && !p.confirmed).length);
         const unassignedRegulars = Vue.computed(() => baseRegulars.value.filter(p => p.base !== 'preto' && p.base !== 'vermelho'));
         // Everyone confirmed plays: base members + recovered regulars (as guests) + real guests
         const matchPlayerCount = Vue.computed(() => confirmedPlayers.value.length);
@@ -1288,6 +1294,20 @@
           drawModified.value = false;
         }
 
+        // Troca jogadores entre os times BASE (troca o campo p.base dos dois)
+        function selectSwapBase(team, p) {
+          if (cloudEnabled.value && !canEdit.value) return; // somente leitura
+          if (!swapFromBase.value) { swapFromBase.value = { team, name: p.name }; return; }
+          if (swapFromBase.value.team === team) {
+            swapFromBase.value = swapFromBase.value.name === p.name ? null : { team, name: p.name };
+            return;
+          }
+          const a = players.value.find(x => x.name === swapFromBase.value.name);
+          const b = players.value.find(x => x.name === p.name);
+          if (a && b) { const t = a.base; a.base = b.base; b.base = t; }
+          swapFromBase.value = null;
+        }
+
         function registerMatch() {
           if (!teamPreto.value.length || !teamVermelho.value.length) return;
           if (mustResort.value) {
@@ -1638,6 +1658,7 @@
           blocks, blockPlayer1, blockPlayer2, availableBlockPlayers, activePlayers,
           newGuest, confirmedPlayers, confirmedGuests,
           baseRegulars, baseSorted, baseTeamPreto, baseTeamVermelho, unassignedRegulars, matchPlayerCount,
+          showBaseFaltantes, swapFromBase, baseFaltantes, selectSwapBase,
           matches, scorePreto, scoreVermelho, matchDate, sessionRecord, mustResort, standings,
           categories: CATEGORIES,
           addPlayer, removePlayer, clearGuests, toggleActive, toggleEdit, saveRatings,
