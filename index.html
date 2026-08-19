@@ -612,14 +612,17 @@
               </span>
             </div>
             <div v-if="editingIndex === realIndex(p) && !readOnly" class="form-card lockable">
-              <div class="label-cap">NOTAS DE {{ p.name.toUpperCase() }}</div>
+              <div class="label-cap">EDITAR JOGADOR</div>
+              <input type="text" v-model.trim="editName" placeholder="Nome do jogador">
+              <label class="guest-check"><input type="checkbox" v-model="editGuest"> Convidado (jogador de fora)</label>
+              <div class="label-cap" style="margin-top:4px">NOTAS</div>
               <div class="rate-grid">
                 <div class="rate-row" v-for="cat in categories" :key="cat.key">
                   <span class="rl">{{ cat.label }}</span>
                   <span class="rate-stars"><span v-for="n in 5" :key="n" :class="n <= editRatings[cat.key] ? 'on' : 'off'" @click="editRatings[cat.key]=n">★</span></span>
                 </div>
               </div>
-              <button class="btn-primary" @click="saveRatings(realIndex(p))">Salvar notas</button>
+              <button class="btn-primary" @click="saveEdit(realIndex(p))">Salvar</button>
             </div>
           </template>
         </div>
@@ -757,6 +760,8 @@
         const teamVermelho = ref([]);
         const editingIndex = ref(-1);
         const editRatings = reactive(defaultRatings());
+        const editName = ref('');
+        const editGuest = ref(false);
         const history = ref(load('history', '[]'));
         const matches = ref(load('matches', '[]'));
         const scorePreto = ref(null);
@@ -1040,12 +1045,39 @@
             return;
           }
           editingIndex.value = index;
-          const r = players.value[index].ratings;
-          Object.assign(editRatings, { ...r });
+          const p = players.value[index];
+          Object.assign(editRatings, { ...p.ratings });
+          editName.value = p.name;
+          editGuest.value = !!p.guest;
         }
 
-        function saveRatings(index) {
-          players.value[index].ratings = { ...editRatings };
+        // Renomeia o jogador propagando o novo nome em partidas/historico/bloqueios/times atuais
+        function renamePlayer(index, novo) {
+          novo = (novo || '').trim();
+          const p = players.value[index];
+          if (!p || !novo || novo === p.name) return;
+          if (players.value.some((x, i) => i !== index && x.name === novo)) { alert('Ja existe um jogador com esse nome.'); return; }
+          const old = p.name;
+          const rep = (arr) => (arr || []).map(n => n === old ? novo : n);
+          matches.value.forEach(m => { m.preto = rep(m.preto); m.vermelho = rep(m.vermelho); if (m.faltas) m.faltas = rep(m.faltas); });
+          history.value.forEach(h => { h.preto = rep(h.preto); h.vermelho = rep(h.vermelho); });
+          blocks.value = blocks.value.map(b => [b[0] === old ? novo : b[0], b[1] === old ? novo : b[1]]);
+          teamPreto.value = teamPreto.value.map(x => x.name === old ? { ...x, name: novo } : x);
+          teamVermelho.value = teamVermelho.value.map(x => x.name === old ? { ...x, name: novo } : x);
+          p.name = novo;
+          saveLastDraw();
+        }
+
+        function saveEdit(index) {
+          const p = players.value[index];
+          if (!p) return;
+          p.ratings = { ...editRatings };
+          // convidado <-> fixo
+          if (!!editGuest.value !== !!p.guest) {
+            p.guest = !!editGuest.value;
+            p.base = null; // convidado nao tem time base; fixo entra na base no proximo sorteio
+          }
+          renamePlayer(index, editName.value); // propaga o nome (valida duplicado)
           editingIndex.value = -1;
         }
 
@@ -1654,14 +1686,14 @@
           filteredElenco, standingsView, attendanceView, fmtAvg, teamAvg, starsOn, starsOff, readOnly,
           incScore, decScore, winLabel, winColor, realIndex, goAddGuest, copyPlayer, copyTeams, copyMsg,
           players, newName, newRatings, teamPreto, teamVermelho, teamPretoView, teamVermelhoView,
-          editingIndex, editRatings, history, swapFrom, drawModified,
+          editingIndex, editRatings, editName, editGuest, history, swapFrom, drawModified,
           blocks, blockPlayer1, blockPlayer2, availableBlockPlayers, activePlayers,
           newGuest, confirmedPlayers, confirmedGuests,
           baseRegulars, baseSorted, baseTeamPreto, baseTeamVermelho, unassignedRegulars, matchPlayerCount,
           showBaseFaltantes, swapFromBase, baseFaltantes, selectSwapBase,
           matches, scorePreto, scoreVermelho, matchDate, sessionRecord, mustResort, standings,
           categories: CATEGORIES,
-          addPlayer, removePlayer, clearGuests, toggleActive, toggleEdit, saveRatings,
+          addPlayer, removePlayer, clearGuests, toggleActive, toggleEdit, saveEdit,
           toggleConfirm, confirmAll, newDay,
           addBlock, removeBlock, selectSwap, saveModifiedDraw, clearHistory, removeHistory,
           sortBaseTeams, generateMatchTeams, restoreBase,
