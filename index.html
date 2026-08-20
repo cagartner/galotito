@@ -270,6 +270,8 @@
     .match-item2 .sc { font-family: var(--disp); font-size: 24px; letter-spacing: 0.02em; }
     .match-item2 .bot { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
     .match-item2 .dt { font-size: 12px; color: var(--t5); }
+    .match-faltas { font-size: 12px; color: var(--red-text); }
+    .btn-falta-base { align-self: flex-start; background: transparent; border: 1px solid var(--line2); color: var(--t3); border-radius: 999px; padding: 5px 12px; font-size: 12px; }
     .del-x { background: none; color: var(--red); font-size: 18px; padding: 0 4px; line-height: 1; }
 
     /* Ranking table */
@@ -523,6 +525,8 @@
                   <button class="del-x lockable" @click="removeMatch(i)">×</button>
                 </span>
               </div>
+              <div v-if="m.faltas && m.faltas.length" class="match-faltas">Faltas: {{ m.faltas.join(', ') }}</div>
+              <button class="btn-falta-base lockable" @click="addBaseFaltasToMatch(i)">+ marcar faltas do time base</button>
             </div>
           </div>
         </template>
@@ -1383,7 +1387,23 @@
         }
 
         function removeMatch(index) {
+          if (!confirm('Remover esta partida do historico?')) return;
           matches.value.splice(index, 1);
+        }
+
+        // Adiciona como falta, nesta partida, os jogadores do time base (ativos) que nao jogaram
+        function addBaseFaltasToMatch(index) {
+          if (!requireEdit()) return;
+          const m = matches.value[index];
+          if (!m) return;
+          const jogaram = new Set([...(m.preto || []), ...(m.vermelho || [])]);
+          const jaFaltou = new Set(m.faltas || []);
+          const novos = baseRegulars.value
+            .filter(p => (p.base === 'preto' || p.base === 'vermelho') && !jogaram.has(p.name) && !jaFaltou.has(p.name))
+            .map(p => p.name);
+          if (!novos.length) { alert('Nenhum jogador do time base ausente para adicionar (todos jogaram ou ja estao nas faltas).'); return; }
+          if (!confirm('Marcar como falta nesta partida: ' + novos.join(', ') + '?')) return;
+          m.faltas = [...(m.faltas || []), ...novos];
         }
 
         function clearMatches() {
@@ -1701,7 +1721,7 @@
           toggleConfirm, confirmAll, newDay,
           addBlock, removeBlock, selectSwap, saveModifiedDraw, clearHistory, removeHistory,
           sortBaseTeams, generateMatchTeams, restoreBase,
-          registerMatch, removeMatch, clearMatches,
+          registerMatch, removeMatch, clearMatches, addBaseFaltasToMatch,
           exportData, importData
         };
       }
