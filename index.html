@@ -503,7 +503,7 @@
             <div v-if="showFaltas" class="falta-chips">
               <button v-for="p in confirmedPlayers" :key="p.name" class="chip" :class="{ faltou: p.faltou }" @click="toggleFaltou(realIndex(p))">{{ p.name }}</button>
             </div>
-            <p v-if="showFaltas" class="hint-small">Quem for marcado não conta como presente e vira "falta" no ranking ao registrar a partida.</p>
+            <p v-if="showFaltas" class="hint-small">Marque aqui quem confirmou mas não veio. Jogadores do time base que não confirmaram presença já entram como falta automaticamente ao registrar a partida.</p>
           </div>
         </template>
 
@@ -1362,8 +1362,11 @@
           } else {
             dateStr = now.toLocaleDateString('pt-BR') + ' ' + hora;
           }
-          // quem marcou presenca mas faltou: nao conta como presente e vai para "faltas"
-          const faltou = new Set(players.value.filter(p => p.faltou).map(p => p.name));
+          // Faltas = marcados manualmente + jogadores do time base (ativos) que NAO confirmaram presenca
+          const faltou = new Set([
+            ...players.value.filter(p => p.faltou).map(p => p.name),
+            ...players.value.filter(p => p.active && !p.guest && (p.base === 'preto' || p.base === 'vermelho') && !p.confirmed).map(p => p.name)
+          ]);
           matches.value.unshift({
             drawId: currentDrawId.value,
             date: dateStr,
