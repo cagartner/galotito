@@ -435,14 +435,14 @@
           <div v-if="baseSorted" class="teams-grid">
             <div class="teamcard preto">
               <div class="thead"><span class="tname">Base Preto</span><span class="tavg">{{ teamAvg(baseTeamPreto) }}</span></div>
-              <ul><li v-for="p in baseTeamPreto" :key="p.name" :class="{ faint: showBaseFaltantes && !p.confirmed, sel: swapFromBase && swapFromBase.team==='preto' && swapFromBase.name===p.name }" @click="selectSwapBase('preto', p)"><span class="nm"><span v-if="p.goalkeeper" class="glove">🧤</span>{{ p.name }}</span><span v-if="showBaseFaltantes && !p.confirmed" class="tag-xs falta">falta</span></li></ul>
+              <ul><li v-for="p in baseTeamPreto" :key="p.name" :class="{ faint: showBaseFaltantes && !p.confirmed, sel: swapFromBase && swapFromBase.team==='preto' && swapFromBase.name===p.name }" @click="selectSwapBase('preto', p)"><span class="nm"><span v-if="p.goalkeeper" class="glove">🧤</span>{{ p.name }}</span><span v-if="showBaseFaltantes && !p.confirmed" class="tag-xs falta">falta</span><button v-if="!readOnly" class="move-btn" @click.stop="moveBaseToOther('preto', p)" title="Mandar para o Base Vermelho">→</button></li></ul>
             </div>
             <div class="teamcard vermelho">
               <div class="thead"><span class="tname">Base Vermelho</span><span class="tavg">{{ teamAvg(baseTeamVermelho) }}</span></div>
-              <ul><li v-for="p in baseTeamVermelho" :key="p.name" :class="{ faint: showBaseFaltantes && !p.confirmed, sel: swapFromBase && swapFromBase.team==='vermelho' && swapFromBase.name===p.name }" @click="selectSwapBase('vermelho', p)"><span class="nm"><span v-if="p.goalkeeper" class="glove">🧤</span>{{ p.name }}</span><span v-if="showBaseFaltantes && !p.confirmed" class="tag-xs falta">falta</span></li></ul>
+              <ul><li v-for="p in baseTeamVermelho" :key="p.name" :class="{ faint: showBaseFaltantes && !p.confirmed, sel: swapFromBase && swapFromBase.team==='vermelho' && swapFromBase.name===p.name }" @click="selectSwapBase('vermelho', p)"><button v-if="!readOnly" class="move-btn" @click.stop="moveBaseToOther('vermelho', p)" title="Mandar para o Base Preto">←</button><span class="nm"><span v-if="p.goalkeeper" class="glove">🧤</span>{{ p.name }}</span><span v-if="showBaseFaltantes && !p.confirmed" class="tag-xs falta">falta</span></li></ul>
             </div>
           </div>
-          <div v-if="baseSorted && !readOnly" class="swap-hint2">{{ swapFromBase ? 'Toque num jogador do outro time para trocar' : 'Toque em dois jogadores para trocar entre os times base' }}</div>
+          <div v-if="baseSorted && !readOnly" class="swap-hint2">{{ swapFromBase ? 'Toque num jogador do outro time para trocar' : 'Toque em dois jogadores para trocar, ou use a seta para mandar um jogador pro outro time base' }}</div>
           <button v-if="baseSorted && baseFaltantes" class="btn-ghost sm" @click="showBaseFaltantes = !showBaseFaltantes">{{ showBaseFaltantes ? 'Ocultar faltantes' : 'Ver faltantes (' + baseFaltantes + ')' }}</button>
           <p v-if="baseSorted && unassignedRegulars.length" class="screen-sub">Fora do time base: {{ unassignedRegulars.map(p=>p.name).join(', ') }} — se confirmados, entram como convidados na partida.</p>
           <button v-if="baseSorted" class="btn-share" @click="copyTeams">📋 Copiar times para o WhatsApp</button>
@@ -1362,6 +1362,15 @@
           swapFromBase.value = null;
         }
 
+        // Move um jogador direto para o outro time BASE (sem precisar trocar por ninguem)
+        function moveBaseToOther(fromTeamName, p) {
+          if (cloudEnabled.value && !canEdit.value) return; // somente leitura
+          const target = players.value.find(x => x.name === p.name);
+          if (!target) return;
+          target.base = fromTeamName === 'preto' ? 'vermelho' : 'preto';
+          swapFromBase.value = null;
+        }
+
         function registerMatch() {
           if (!teamPreto.value.length || !teamVermelho.value.length) return;
           if (mustResort.value) {
@@ -1731,7 +1740,7 @@
           blocks, blockPlayer1, blockPlayer2, availableBlockPlayers, activePlayers,
           newGuest, confirmedPlayers, confirmedGuests,
           baseRegulars, baseSorted, baseTeamPreto, baseTeamVermelho, unassignedRegulars, matchPlayerCount,
-          showBaseFaltantes, swapFromBase, baseFaltantes, selectSwapBase,
+          showBaseFaltantes, swapFromBase, baseFaltantes, selectSwapBase, moveBaseToOther,
           matches, scorePreto, scoreVermelho, matchDate, sessionRecord, mustResort, standings,
           categories: CATEGORIES,
           addPlayer, removePlayer, clearGuests, toggleActive, toggleEdit, saveEdit,
