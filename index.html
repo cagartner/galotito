@@ -244,6 +244,9 @@
     .teamcard li { display: flex; align-items: center; gap: 6px; font-size: 14px; color: var(--t2); padding: 7px 0; border-bottom: 1px solid rgba(255,255,255,0.06); cursor: pointer; }
     .teamcard li:last-child { border-bottom: none; }
     .teamcard li .nm { flex: 1; }
+    .move-btn { flex: none; width: 26px; height: 26px; border-radius: 7px; border: 1px solid var(--line2); background: rgba(255,255,255,0.05); color: var(--t2); font-size: 15px; line-height: 1; cursor: pointer; display: flex; align-items: center; justify-content: center; padding: 0; }
+    .move-btn:hover { background: rgba(255,255,255,0.12); color: var(--t1); }
+    .teamcard.vermelho .move-btn { border-color: var(--red); }
     .teamcard li.sel { background: rgba(240,39,46,0.18); border-radius: 6px; padding-left: 6px; padding-right: 6px; }
     .teamcard li.faint { opacity: 0.45; }
     .tag-xs { font-size: 10px; border-radius: 5px; padding: 1px 5px; border: 1px solid currentColor; }
@@ -454,14 +457,14 @@
           <div v-if="teamPreto.length || teamVermelho.length" class="teams-grid">
             <div class="teamcard preto">
               <div class="thead"><span class="tname">Preto</span><span class="tavg">{{ teamAvg(teamPreto) }}</span></div>
-              <ul><li v-for="p in teamPretoView" :key="p.name" :class="{ sel: swapFrom && swapFrom.team==='preto' && swapFrom.name===p.name }" @click="selectSwap('preto', p)"><span class="nm"><span v-if="p.goalkeeper" class="glove">🧤</span>{{ p.name }}</span><template v-if="!p.goalkeeper"><span v-if="p.guest" class="tag-xs conv">conv.</span><span v-else-if="p.floater" class="tag-xs extra">extra</span></template></li></ul>
+              <ul><li v-for="p in teamPretoView" :key="p.name" :class="{ sel: swapFrom && swapFrom.team==='preto' && swapFrom.name===p.name }" @click="selectSwap('preto', p)"><span class="nm"><span v-if="p.goalkeeper" class="glove">🧤</span>{{ p.name }}</span><template v-if="!p.goalkeeper"><span v-if="p.guest" class="tag-xs conv">conv.</span><span v-else-if="p.floater" class="tag-xs extra">extra</span></template><button class="move-btn lockable" @click.stop="moveToOther('preto', p)" title="Mandar para o Vermelho">→</button></li></ul>
             </div>
             <div class="teamcard vermelho">
               <div class="thead"><span class="tname">Vermelho</span><span class="tavg">{{ teamAvg(teamVermelho) }}</span></div>
-              <ul><li v-for="p in teamVermelhoView" :key="p.name" :class="{ sel: swapFrom && swapFrom.team==='vermelho' && swapFrom.name===p.name }" @click="selectSwap('vermelho', p)"><span class="nm"><span v-if="p.goalkeeper" class="glove">🧤</span>{{ p.name }}</span><template v-if="!p.goalkeeper"><span v-if="p.guest" class="tag-xs conv">conv.</span><span v-else-if="p.floater" class="tag-xs extra">extra</span></template></li></ul>
+              <ul><li v-for="p in teamVermelhoView" :key="p.name" :class="{ sel: swapFrom && swapFrom.team==='vermelho' && swapFrom.name===p.name }" @click="selectSwap('vermelho', p)"><button class="move-btn lockable" @click.stop="moveToOther('vermelho', p)" title="Mandar para o Preto">←</button><span class="nm"><span v-if="p.goalkeeper" class="glove">🧤</span>{{ p.name }}</span><template v-if="!p.goalkeeper"><span v-if="p.guest" class="tag-xs conv">conv.</span><span v-else-if="p.floater" class="tag-xs extra">extra</span></template></li></ul>
             </div>
           </div>
-          <div v-if="teamPreto.length" class="swap-hint2 lockable">{{ swapFrom ? 'Toque num jogador do outro time para trocar' : 'Toque em dois jogadores para trocar de time' }}</div>
+          <div v-if="teamPreto.length" class="swap-hint2 lockable">{{ swapFrom ? 'Toque num jogador do outro time para trocar' : 'Toque em dois jogadores para trocar, ou use a seta para mandar um jogador pro outro time' }}</div>
           <button v-if="drawModified" class="btn-ghost lockable" @click="saveModifiedDraw">Salvar alterações</button>
           <button v-if="teamPreto.length" class="btn-share" @click="copyTeams">📋 Copiar times para o WhatsApp</button>
           <p v-if="copyMsg" class="copy-msg">{{ copyMsg }}</p>
@@ -1326,6 +1329,20 @@
           swapFrom.value = null;
         }
 
+        // Move um jogador direto para o outro time (sem precisar trocar por ninguem)
+        function moveToOther(fromTeamName, p) {
+          const fromTeam = fromTeamName === 'preto' ? teamPreto : teamVermelho;
+          const toTeam = fromTeamName === 'preto' ? teamVermelho : teamPreto;
+          const fi = fromTeam.value.findIndex(x => x.name === p.name);
+          if (fi === -1) return;
+          const [moved] = fromTeam.value.splice(fi, 1);
+          toTeam.value.push(moved);
+          teamPreto.value = [...teamPreto.value];
+          teamVermelho.value = [...teamVermelho.value];
+          drawModified.value = true;
+          swapFrom.value = null;
+        }
+
         function saveModifiedDraw() {
           saveLastDraw();
           drawModified.value = false;
@@ -1719,7 +1736,7 @@
           categories: CATEGORIES,
           addPlayer, removePlayer, clearGuests, toggleActive, toggleEdit, saveEdit,
           toggleConfirm, confirmAll, newDay,
-          addBlock, removeBlock, selectSwap, saveModifiedDraw, clearHistory, removeHistory,
+          addBlock, removeBlock, selectSwap, moveToOther, saveModifiedDraw, clearHistory, removeHistory,
           sortBaseTeams, generateMatchTeams, restoreBase,
           registerMatch, removeMatch, clearMatches, addBaseFaltasToMatch,
           exportData, importData
