@@ -1,0 +1,76 @@
+{
+  "version": "1.0.0",
+  "lastScanned": 1795035607282,
+  "projectRoot": "/Users/carlosgartner/workspace/sorteio/.claude/worktrees/sorteio-transferencia-direta-a220b7",
+  "techStack": {
+    "languages": [],
+    "frameworks": [],
+    "packageManager": null,
+    "runtime": null
+  },
+  "build": {
+    "buildCommand": null,
+    "testCommand": null,
+    "lintCommand": null,
+    "devCommand": null,
+    "scripts": {}
+  },
+  "conventions": {
+    "namingStyle": null,
+    "importStyle": null,
+    "testPattern": null,
+    "fileOrganization": null
+  },
+  "structure": {
+    "isMonorepo": false,
+    "workspaces": [],
+    "mainDirectories": [
+      "assets"
+    ],
+    "gitBranches": null
+  },
+  "customNotes": [],
+  "directoryMap": {
+    "assets": {
+      "path": "assets",
+      "purpose": "Static assets",
+      "fileCount": 1,
+      "lastAccessed": 1795035607271,
+      "keyFiles": [
+        "escudo-galo-tito.png"
+      ]
+    },
+    "design": {
+      "path": "design",
+      "purpose": null,
+      "fileCount": 3,
+      "lastAccessed": 1795035607271,
+      "keyFiles": [
+        "README.md",
+        "tokens.css",
+        "tokens.json"
+      ]
+    },
+    "icons": {
+      "path": "icons",
+      "purpose": null,
+      "fileCount": 4,
+      "lastAccessed": 1795035607271,
+      "keyFiles": [
+        "apple-touch-180.png",
+        "icon-192.png",
+        "icon-512.png",
+        "icon-maskable-512.png"
+      ]
+    }
+  },
+  "hotPaths": [
+    {
+      "path": "index.html",
+      "accessCount": 9,
+      "lastAccessed": 1795035693547,
+      "type": "file"
+    }
+  ],
+  "userDirectives": []
+}
